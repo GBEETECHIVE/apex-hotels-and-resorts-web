@@ -1,0 +1,132 @@
+.activity-gallery-carousel {
+  width: 100%;
+}
+
+.activity-gallery-columns {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  width: 100%;
+}
+
+.activity-gallery-image-panel {
+  position: relative;
+  flex: 0 0 56%;
+  max-width: 56%;
+}
+
+.activity-gallery-main-image {
+  width: 100%;
+  height: 470px;
+  object-fit: cover;
+  display: block;
+}
+
+.activity-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 50%;
+  background: #9eadd0;
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.activity-arrow-left {
+  left: -30px;
+}
+
+.activity-arrow-right {
+  right: -30px;
+}
+
+.activity-gallery-info-panel {
+  flex: 1;
+  max-width: 460px;
+}
+
+.activity-gallery-title {
+  margin: 0 0 24px;
+  font-size: 72px;
+  line-height: 0.95;
+  font-weight: 300;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #111;
+}
+
+.activity-gallery-desc {
+  margin: 0;
+  font-size: 33px;
+  line-height: 1.5;
+  color: #666;
+}
+
+@media (max-width: 1200px) {
+  .activity-gallery-title {
+    font-size: 64px;
+  }
+}
+
+@media (max-width: 992px) {
+  .activity-gallery-columns {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .activity-gallery-image-panel {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .activity-gallery-main-image {
+    height: 360px;
+  }
+
+  .activity-arrow-left {
+    left: 12px;
+  }
+
+  .activity-arrow-right {
+    right: 12px;
+  }
+
+  .activity-gallery-title {
+    font-size: 46px;
+  }
+
+  .activity-gallery-desc {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .activity-gallery-main-image {
+    height: 260px;
+  }
+
+  .activity-arrow {
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  .activity-gallery-title {
+    font-size: 34px;
+  }
+
+  .activity-gallery-desc {
+    font-size: 18px;
+  }
+}

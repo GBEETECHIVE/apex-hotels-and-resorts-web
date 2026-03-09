@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PropertyCard from '../../components/PropertyCard/PropertyCard';
 import './Listings.css';
+import BannerSection from '../../components/BannerSection/BannerSection';
 
 const Listings = () => {
   const [searchParams] = useSearchParams();
@@ -202,12 +203,7 @@ const Listings = () => {
 
   return (
     <div className="listings-page">
-      <div className="listings-header">
-        <div className="container">
-          <h1>Find Your Perfect Property</h1>
-          <p>{filteredProperties.length} properties available</p>
-        </div>
-      </div>
+      <BannerSection title="Find Your Perfect Property" subtitle={`${filteredProperties.length} properties available`} />
 
       <div className="container">
         <div className="listings-layout">

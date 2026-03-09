@@ -1,0 +1,18 @@
+.explore-section {
+  padding: 60px 0;
+  background: #f8f9fa;
+}
+.explore-container {
+  max-width: 1500px;
+  margin: 0 auto;
+  text-align: center;
+}
+.explore-title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #222;
+}
+.explore-desc {
+  font-size: 1.2rem;
+  color: #555;
+}

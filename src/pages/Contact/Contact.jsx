@@ -133,6 +133,8 @@ const Contact = () => {
               <p>+92 321 7654321</p>
             </div>
 
+            <div className="contact-info-blue-bar" />
+
             <div className="info-card">
               <div className="info-icon">📍</div>
               <h4>Office</h4>

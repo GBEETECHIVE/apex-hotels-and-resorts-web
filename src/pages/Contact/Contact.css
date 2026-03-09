@@ -46,7 +46,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0rem;
 }
 
 .contact-form .form-group {
@@ -107,6 +107,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.contact-info-blue-bar {
+  width: 100%;
+  height: 12px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0 0 8px 8px;
+  margin: 1.2rem 0 0 0;
 }
 
 .info-card {

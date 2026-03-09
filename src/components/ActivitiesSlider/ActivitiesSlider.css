@@ -1,0 +1,158 @@
+.activities-slider-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 0 0 0;
+}
+
+.activities-main-title {
+  text-align: center;
+  font-size: 3.8rem;
+  line-height: 1;
+  font-weight: 500;
+  color: #111;
+  margin: 8px 0 42px 0;
+}
+
+.activities-slide-row {
+  display: flex;
+  gap: 56px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.activities-slide-info {
+  flex: 0 0 33%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-top: 52px;
+}
+
+.activities-slide-arrows {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 34px;
+}
+
+.activities-arrow {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  background: #b9c3d8;
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.activities-arrow.active {
+  background: #6f83b8;
+}
+
+.activities-slide-title {
+  font-size: 2.1rem;
+  line-height: 1.05;
+  letter-spacing: 0;
+  font-weight: 500;
+  margin: 0 0 20px 0;
+  color: #111;
+}
+
+.activities-slide-desc {
+
+  line-height: 1.7;
+  color: #5a5a5a;
+  margin: 0;
+}
+
+.activities-slide-gallery {
+  flex: 0 0 62%;
+  display: flex;
+  align-items: stretch;
+}
+
+.activities-slide-gallery-grid {
+  display: flex;
+  width: 100%;
+  gap: 4px;
+}
+
+.activities-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activities-slide-img.small {
+  width: 100%;
+  max-width: 245px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.activities-slide-img.tall {
+  width: 100%;
+  max-width: 280px;
+  min-height: 0;
+  aspect-ratio: 3 / 4.6;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+@media (max-width: 900px) {
+  .activities-slider-container {
+    max-width: 98vw;
+  }
+
+  .activities-main-title {
+    font-size: 2.4rem;
+    margin-bottom: 28px;
+  }
+
+  .activities-slide-row {
+    flex-direction: column;
+    gap: 32px;
+    align-items: center;
+  }
+
+  .activities-slide-info {
+    flex: 1;
+    max-width: 95vw;
+    padding-top: 0;
+    align-items: center;
+    text-align: center;
+  }
+
+  .activities-slide-title {
+    font-size: 2.1rem;
+  }
+
+  .activities-slide-desc {
+    font-size: 1.1rem;
+  }
+
+  .activities-slide-gallery {
+    flex: 1;
+    width: 100%;
+  }
+
+  .activities-slide-gallery-grid {
+    gap: 8px;
+  }
+
+  .activities-col {
+    gap: 8px;
+  }
+
+  .activities-slide-img.small {
+    max-width: none;
+  }
+
+  .activities-slide-img.tall {
+    max-width: none;
+  }
+}

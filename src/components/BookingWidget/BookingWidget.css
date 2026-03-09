@@ -1,0 +1,31 @@
+.booking-widget { position: relative; z-index: 1; background: white; border-radius: 8px; padding: 2.5rem; max-width: 420px; flex-shrink: 0; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25); }
+
+.booking-field { margin-bottom: 1.8rem; }
+
+.booking-field label { display: block; font-size: 0.9rem; font-weight: 700; color: #333; margin-bottom: 0.5rem; }
+
+.booking-field select, .booking-field input[type="date"] { width: 100%; padding: 0.8rem; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.95rem; }
+
+.booking-dates .date-row { display: flex; gap: 0.5rem; align-items: center; }
+
+.date-row input[type="date"] { flex: 1; }
+
+.date-sep { color: #666; font-weight: 700; }
+
+.rooms-field .rooms-counter { display: inline-flex; align-items: center; gap: 0.75rem; background: #f4f6f8; padding: 0.25rem 0.5rem; border-radius: 6px; }
+
+.rooms-btn { background: transparent; border: none; font-size: 1.3rem; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+
+.rooms-value { width: 40px; text-align: center; font-weight: 700; }
+
+.booking-widget.card { max-width: 420px; width: 100%; padding: 1.4rem; box-shadow: 0 10px 30px rgba(0,0,0,0.12); border-radius: 8px; }
+
+.booking-widget.card .card-field { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(0,0,0,0.04); }
+
+.booking-widget.card .card-field:last-of-type { border-bottom: none; }
+
+.booking-widget.card .card-field label { font-size: 0.85rem; color: #555; margin: 0; }
+
+.booking-widget.card .card-value { color: #333; font-weight: 700; }
+
+.booking-widget .close-widget { position: absolute; top: 8px; right: 10px; background: transparent; border: none; font-size: 1.1rem; cursor: pointer; }

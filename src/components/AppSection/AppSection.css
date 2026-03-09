@@ -1,0 +1,153 @@
+
+/* FAST CHECK IN APP Section Styles */
+
+.fast-checkin-section {
+	background: #fff;
+	padding: 80px 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 80vh;
+}
+
+
+.fast-checkin-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 60px;
+	max-width: 1200px;
+	width: 100%;
+	margin: 0 auto;
+	flex-wrap: wrap;
+	box-sizing: border-box;
+}
+
+
+.fast-checkin-images {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 320px;
+	width: 420px;
+	height: auto;
+	flex: 1 1 320px;
+}
+
+.phone-img-single {
+	width: 440px;
+	height: auto;
+	box-shadow: none;
+	border-radius: 0;
+	background: none;
+}
+
+.fast-checkin-text {
+	flex: 1 1 320px;
+	min-width: 280px;
+	max-width: 500px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	position: relative;
+	margin: 0 auto;
+}
+.fast-checkin-text h2 {
+	font-size: 3rem;
+	color: #22304a;
+	font-weight: 700;
+	letter-spacing: 2px;
+	margin-bottom: 18px;
+}
+.fast-checkin-desc {
+	font-size: 1.1rem;
+	color: #22304a;
+	margin-bottom: 32px;
+	max-width: 500px;
+	line-height: 1.7;
+}
+.fast-checkin-badges {
+	display: flex;
+	gap: 18px;
+	margin-bottom: 32px;
+}
+.store-badge img {
+	height: 54px;
+	width: auto;
+	transition: transform 0.2s;
+}
+.store-badge img:hover {
+	transform: scale(1.06);
+}
+.fast-checkin-arrow {
+	position: absolute;
+	left: 40px;
+	bottom: -60px;
+	width: 160px;
+	height: auto;
+	pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+	.fast-checkin-section {
+		padding: 40px 0;
+		min-height: unset;
+	}
+	.fast-checkin-content {
+		flex-direction: column;
+		gap: 40px;
+		padding: 0 16px;
+		align-items: center;
+	}
+	.fast-checkin-images {
+		margin-bottom: 24px;
+		width: 100%;
+		min-width: 180px;
+		justify-content: center;
+	}
+	.fast-checkin-arrow {
+		left: 0;
+		bottom: -40px;
+		width: 120px;
+	}
+	.fast-checkin-text {
+		align-items: center;
+		text-align: center;
+		margin: 0 auto;
+	}
+}
+
+@media (max-width: 700px) {
+	.fast-checkin-section {
+		padding: 24px 0;
+	}
+	.fast-checkin-content {
+		gap: 18px;
+		padding: 0 8px;
+	}
+	.fast-checkin-images {
+		min-width: 120px;
+		width: 100%;
+		justify-content: center;
+	}
+	.phone-img-single {
+		width: 120px;
+		border-radius: 0;
+		background: none;
+	}
+	.fast-checkin-text {
+		min-width: 0;
+		max-width: 100%;
+		align-items: center;
+		text-align: center;
+	}
+	.fast-checkin-text h2 {
+		font-size: 1.4rem;
+	}
+	.fast-checkin-arrow {
+		width: 50px;
+		left: 0;
+		bottom: -10px;
+	}
+}

@@ -1,0 +1,21 @@
+.destinations-explore-section {
+  width: 100%;
+  background: #efefef;
+  padding: 16px 0 40px;
+}
+
+.destinations-explore-grid {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 30px;
+}
+
+@media (max-width: 900px) {
+  .destinations-explore-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

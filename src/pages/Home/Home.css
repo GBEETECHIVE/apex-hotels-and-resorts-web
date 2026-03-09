@@ -137,6 +137,188 @@
   font-weight: 700;
   color: #333;
   margin-bottom: 0.5rem;
+}
+
+.booking-field select,
+.booking-field input[type="date"] {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.booking-dates .date-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.date-row input[type="date"] {
+  flex: 1;
+}
+
+.date-sep {
+  color: #666;
+  font-weight: 700;
+}
+
+.rooms-field .rooms-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f4f6f8;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.rooms-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.rooms-value {
+  width: 40px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Compact state for BookingWidget */
+.booking-widget.compact {
+  padding: 0.9rem 1.2rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.booking-widget.compact .compact-row {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.booking-widget .close-widget {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+/* Card-style booking fields */
+.booking-widget.card {
+  max-width: 420px;
+  width: 100%;
+  padding: 1.4rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  border-radius: 8px;
+}
+
+.booking-widget.card .card-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.booking-widget.card .card-field:last-of-type {
+  border-bottom: none;
+}
+
+.booking-widget.card .card-field label {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0;
+}
+
+.booking-widget.card .card-value {
+  color: #333;
+  font-weight: 700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .hero-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+
+  .booking-widget.card {
+    max-width: 620px;
+    width: 100%;
+  }
+
+  .carousel-nav {
+    left: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 80px 1.5rem 60px;
+  }
+
+  .hero-left h1 {
+    font-size: 2.2rem;
+    line-height: 1.15;
+  }
+
+  .booking-widget.card {
+    padding: 1rem;
+  }
+
+  .booking-widget.card .card-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    padding: 0.6rem 0;
+  }
+
+  .booking-widget.card .card-value {
+    text-align: left;
+  }
+
+  .date-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .date-row input[type="date"] {
+    width: 100%;
+  }
+
+  .date-sep {
+    display: none;
+  }
+
+  .rooms-counter {
+    justify-content: flex-start;
+  }
+
+  /* make carousel smaller on mobile */
+  .carousel-dots, .carousel-progress {
+    width: 260px !important;
+  }
+}
+
+.booking-field label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.5rem;
   letter-spacing: 0.5px;
 }
 
@@ -180,14 +362,14 @@
   z-index: 2;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .carousel-dots {
-  display: flex;
-  gap: 1.5rem;
+  /* grid layout is applied inline from the component; keep defaults for fallback */
   align-items: center;
+  width: 360px;
 }
 
 .carousel-dot {
@@ -201,8 +383,10 @@
   transition: all 0.3s ease;
   padding: 0.3rem 0.5rem;
   letter-spacing: 1px;
-  min-width: 35px;
+  min-width: auto;
   text-align: center;
+  justify-self: center;
+  align-self: center;
 }
 
 .carousel-dot.active {
@@ -215,11 +399,10 @@
 }
 
 .carousel-progress {
-  width: 100%;
-  max-width: 360px;
+  width: 360px;
   height: 2px;
   display: flex;
-  gap: 1.5rem;
+  justify-content: space-between;
 }
 
 .progress-segment {
@@ -398,6 +581,78 @@
   flex: 1;
 }
 
+/* Slider styles for Locations */
+.hotels-slider {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding: 1rem 0 2rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hotels-slider::-webkit-scrollbar { display: none; }
+
+/* preserve original grid card sizing while using a horizontal slider */
+:root { --card-height: 200px; }
+.hotel-card {
+  scroll-snap-align: start;
+  flex: 0 0 320px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  height: var(--card-height);
+  display: flex;
+  flex-direction: column;
+}
+
+.hotel-card.small { flex: 0 0 260px; }
+.hotel-card.medium { flex: 0 0 320px; }
+.hotel-card.tall { flex: 0 0 320px; height: calc(var(--card-height) * 2 + 1rem); }
+.hotel-card.wide { flex: 0 0 380px; }
+
+.hotel-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  transition: transform 0.5s ease;
+}
+
+.hotel-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80%;
+  padding: 0.8rem 1rem;
+  background: white;
+  color: #333;
+}
+
+.hotel-info h3 { margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; }
+.hotel-info p { margin: 0; font-size: 0.85rem; }
+
+.nav-arrows .nav-arrow {
+  background: transparent;
+  border: 1px solid #ddd;
+  padding: 0.45rem 0.8rem;
+  margin-left: 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.nav-arrows .nav-arrow[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .hotel-image { height: 180px; }
+  .hotel-card { flex: 0 0 240px; }
+  .hotel-card.wide { flex: 0 0 300px; }
+}
+
 .section-title {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
@@ -457,10 +712,24 @@
 }
 
 .hotels-grid {
+  /* Desktop: use original grid layout to preserve exact design */
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-auto-rows: 200px;
   gap: 1rem;
+}
+
+/* On smaller screens switch to a horizontal slider so cards remain readable */
+@media (max-width: 992px) {
+  .hotels-grid {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hotels-grid::-webkit-scrollbar { display: none; }
 }
 
 .hotel-card {
@@ -715,14 +984,7 @@
   background: white;
 }
 
-.contact-section h2 {
-  font-size: 2.5rem;
-  text-align: center;
-  margin-bottom: 3rem;
-  color: #2d3e50;
-  letter-spacing: 2px;
-  font-weight: 700;
-}
+
 
 .contact-form {
   max-width: 800px;
@@ -887,17 +1149,19 @@
   }
 
   .carousel-progress {
-    width: 100%;
+    width: 360px;
+    height: 2px;
+    /* grid is applied inline from component; fallback to flex */
+    display: flex;
+    justify-content: space-between;
   }
-
-  .floating-actions {
-    right: 0.8rem;
-  }
-
-  .floating-btn {
-    width: 50px;
-    height: 50px;
-    font-size: 1.5rem;
+  .progress-segment {
+    justify-self: center;
+    width: 60%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    transition: background 0.3s ease;
   }
 
   .hotels-grid {

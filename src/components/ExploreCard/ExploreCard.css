@@ -1,0 +1,157 @@
+.explore-card {
+  position: relative;
+  width: 100%;
+  min-height: 500px;
+  border-radius: 0;
+  overflow: hidden;
+  background: #0f1720;
+}
+
+.explore-card-gradient-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.explore-card-overlay {
+  position: absolute;
+  inset: 0;
+  padding: 48px 24px 18px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.explore-card-title-center {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 52px;
+}
+
+.explore-card-title {
+  margin: 0;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: clamp(2rem, 3.8vw, 3.3rem);
+  letter-spacing: 2px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.explore-card-btn-center {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.explore-card-btn {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  color: #fff;
+  width: 160px;
+  height: 58px;
+  font-size: 1.95rem;
+  letter-spacing: 1px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.explore-card-hotels-wrapper {
+  margin-top: auto;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.explore-mini-nav {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.explore-card-hotels-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+}
+
+.explore-card-hotel-outer {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  width: 96px;
+}
+
+.explore-card-hotel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.explore-card-hotel-img {
+  width: 92px;
+  height: 78px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+}
+
+.explore-card-hotel-name {
+  margin-top: 7px;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.15;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .explore-card {
+    min-height: 420px;
+  }
+
+  .explore-card-title-center {
+    margin-top: 24px;
+  }
+
+  .explore-card-btn {
+    height: 50px;
+    width: 140px;
+    font-size: 1.05rem;
+  }
+
+  .explore-card-hotel-outer {
+    width: 86px;
+  }
+
+  .explore-card-hotel-img {
+    width: 82px;
+    height: 68px;
+  }
+
+  .explore-card-hotel-name {
+    font-size: 10px;
+  }
+}
