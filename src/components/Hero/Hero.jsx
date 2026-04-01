@@ -2,9 +2,12 @@ import React from 'react';
 import BookingWidget from '../BookingWidget/BookingWidget';
 import './Hero.css';
 
-const Hero = ({ slides = [], activeSlide, setActiveSlide }) => {
+const Hero = ({ slides = [], activeSlide, setActiveSlide, title, phone, whatsapp }) => {
   const currentIndex = Math.max(0, Math.min(slides.length - 1, (activeSlide || 1) - 1));
   const currentImage = slides.length ? slides[currentIndex] : null;
+  const heroTitle = title || 'CHECK IN TO THE\nTIME OF YOUR LIFE';
+  const heroPhone = phone || '+923001234567';
+  const heroWhatsapp = whatsapp || '923001234567';
 
   return (
     <section
@@ -13,7 +16,7 @@ const Hero = ({ slides = [], activeSlide, setActiveSlide }) => {
     >
       <div className="hero-container">
         <div className="hero-left">
-          <h1>CHECK IN TO THE<br/>TIME OF YOUR LIFE</h1>
+          <h1>{heroTitle.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>)}</h1>
         </div>
         {/* Booking Widget - Right Side */}
         <BookingWidget />
@@ -50,8 +53,8 @@ const Hero = ({ slides = [], activeSlide, setActiveSlide }) => {
 
       {/* Floating Action Buttons */}
       <div className="floating-actions">
-        <a href="tel:+923001234567" className="floating-btn phone-btn">📞</a>
-        <a href="https://wa.me/923001234567" className="floating-btn whatsapp-btn" target="_blank" rel="noopener noreferrer">💬</a>
+        <a href={`tel:${heroPhone}`} className="floating-btn phone-btn">📞</a>
+        <a href={`https://wa.me/${heroWhatsapp.replace(/[^0-9]/g, '')}`} className="floating-btn whatsapp-btn" target="_blank" rel="noopener noreferrer">💬</a>
       </div>
     </section>
   );

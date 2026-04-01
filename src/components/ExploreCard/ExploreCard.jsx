@@ -34,12 +34,12 @@ const ExploreCard = ({ title, image, hotels = [], onExplore }) => {
 
   return (
     <div className="explore-card" style={{ position: 'relative' }}>
-      <div
-        className="explore-card-gradient-bg"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(45, 48, 56, 0.5) 0%, rgba(118, 123, 138, 0.85) 100%), url(${image})`,
-        }}
-      />
+<div
+  className="explore-card-gradient-bg"
+  style={{
+    backgroundImage: `linear-gradient(180deg, rgba(45, 48, 56, 0.3) 0%, rgba(0, 0, 0, 0.9) 100%), url(${image})`,
+  }}
+/>
       <div className="explore-card-overlay">
         <div className="explore-card-title-center">
           <h2 className="explore-card-title">{title}</h2>
@@ -48,11 +48,11 @@ const ExploreCard = ({ title, image, hotels = [], onExplore }) => {
           <button className="explore-card-btn" onClick={onExplore}>EXPLORE</button>
         </div>
         <div className="explore-card-hotels-wrapper">
-          {hasMultiple && (
+          {/* {hasMultiple && (
             <button type="button" className="explore-mini-nav left" onClick={handlePrev} aria-label="Previous small cards">
               &#8592;
             </button>
-          )}
+          )} */}
           <div className="explore-card-hotels-row">
             {visibleHotels.map((hotel, idx) => (
               <button
@@ -68,11 +68,11 @@ const ExploreCard = ({ title, image, hotels = [], onExplore }) => {
               </button>
             ))}
           </div>
-          {hasMultiple && (
+          {/* {hasMultiple && (
             <button type="button" className="explore-mini-nav right" onClick={handleNext} aria-label="Next small cards">
               &#8594;
             </button>
-          )}
+          )} */}
         </div>
       </div>
     </div>

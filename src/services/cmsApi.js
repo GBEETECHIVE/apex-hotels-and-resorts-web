@@ -1,0 +1,70 @@
+const requestJson = async (url, options, fallbackMessage) => {
+  const response = await fetch(url, options);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(payload.error || fallbackMessage);
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
+};
+
+export const fetchCms = async () => requestJson('/api/cms', undefined, 'Failed to load CMS data');
+
+export const fetchHomePage = async () => {
+  const data = await fetchCms();
+  return data.homePage || {};
+};
+
+const getAdminHeaders = (token) => {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+export const adminLogin = async (username, password) => {
+  return requestJson('/api/admin/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username, password }),
+  }, 'Login failed');
+};
+
+export const updateCms = async (cmsData, token) => {
+  return requestJson('/api/admin/cms', {
+    method: 'PUT',
+    headers: getAdminHeaders(token),
+    body: JSON.stringify(cmsData),
+  }, 'Failed to save CMS data');
+};
+
+export const seedCms = async (token) => {
+  return requestJson('/api/admin/seed', {
+    method: 'POST',
+    headers: getAdminHeaders(token),
+  }, 'Failed to seed CMS');
+};
+
+export const fetchAdminBookings = async (token) => {
+  return requestJson('/api/admin/bookings', {
+    headers: getAdminHeaders(token),
+  }, 'Failed to fetch bookings');
+};
+
+export const updateBookingStatus = async (bookingId, status, token) => {
+  return requestJson(`/api/admin/bookings/${bookingId}/status`, {
+    method: 'PATCH',
+    headers: getAdminHeaders(token),
+    body: JSON.stringify({ status }),
+  }, 'Failed to update booking status');
+};

@@ -1,48 +1,152 @@
-.locations-section { padding: 100px 0; background: #f8f9fa; }
+/* ── Hide default slick controls ── */
+.locations-section .slick-dots,
+.locations-section .slick-arrow { display: none !important; }
 
-.locations-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3rem; }
-
-.locations-title-area { flex: 1; }
-
-.hotels-grid { overflow: hidden; }
-
-.hotels-track { display: flex; gap: 1.25rem; padding: 1rem 0 2rem; -webkit-overflow-scrolling: touch; }
-
-.hotels-track::-webkit-scrollbar { display: none; }
-
-.hotel-card { flex: 0 0 320px; border-radius: 8px; overflow: hidden; background: white; }
-
-.hotel-card.small { flex: 0 0 260px; }
-.hotel-card.medium { flex: 0 0 320px; }
-.hotel-card.tall { flex: 0 0 280px; }
-.hotel-card.wide { flex: 0 0 380px; }
-
-.hotel-image { width: 100%; height: 200px; background-size: cover; background-position: center; position: relative; transition: transform 0.5s ease; }
-
-.hotel-info { position: absolute; bottom: 0; left: 0; width: 80%; padding: 0.8rem 1rem; background: white; color: #333; }
-
-.hotel-info h3 { margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; }
-.hotel-info p { margin: 0; font-size: 0.85rem; }
-
-.nav-arrows { display:flex; align-items:center; gap:0.75rem; }
-.nav-arrows .nav-arrow { background: #7f8fa6; color: white; border: none; width:56px; height:56px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 8px 20px rgba(31,45,70,0.12); }
-.nav-arrows .nav-arrow.prev { background: #bfc9dd; }
-.nav-arrows .nav-arrow.next { background: #6f7fb2; }
-.nav-arrows .nav-arrow[disabled] { opacity: 0.35; cursor: default; }
-
-@media (max-width: 991px) {
-	.hotels-grid { overflow-x: auto; }
-	.hotels-track { scroll-snap-type: x mandatory; }
-	.hotel-card { flex: 0 0 240px; }
-	.hotel-card.wide { flex: 0 0 300px; }
-	.hotel-image { height: 180px; }
+/* ── Section ── */
+.locations-section {
+  padding: 80px 0 100px;
+  background: #f8f9fa;
 }
 
-@media (min-width: 992px) {
-	/* Desktop: show larger cards */
-	.hotel-card { flex: 0 0 320px; }
-	.hotel-card.small { flex: 0 0 260px; }
-	.hotel-card.medium { flex: 0 0 320px; }
-	.hotel-card.tall { flex: 0 0 280px; }
-	.hotel-card.wide { flex: 0 0 380px; }
+/* ── Header ── */
+.locations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+}
+.locations-title-area { flex: 1; }
+.locations-title-area .section-title {
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.3rem;
+}
+.locations-title-area .section-subtitle {
+  font-size: 1.05rem;
+  color: #666;
+  margin: 0;
+}
+.locations-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.view-more-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #333;
+}
+
+/* ── Slick overrides so grid keeps its height ── */
+.locations-section .slick-slide > div { height: auto; }
+
+/* ── Grid (5 cols × 2 rows) ── */
+.hotels-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 220px 220px;
+  gap: 1.25rem;
+  grid-auto-flow: dense;
+}
+
+/* ── Card base ── */
+.hotel-card {
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.hotel-card.tall {
+  grid-row: span 2;
+}
+.hotel-card.wide {
+  grid-column: span 2;
+}
+
+/* ── Image fills the card ── */
+.hotel-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+/* ── Info label ── */
+.hotel-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  max-width: 80%;
+  padding: 0.7rem 1rem;
+  background: #fff;
+  color: #333;
+}
+.hotel-info h3 {
+  margin: 0 0 3px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+.hotel-info p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #555;
+}
+
+/* ── Arrow nav ── */
+.nav-arrows {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.nav-arrows .nav-arrow {
+  color: #fff;
+  border: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 14px rgba(31, 45, 70, 0.12);
+}
+.nav-arrows .nav-arrow.prev { background: #bfc9dd; }
+.nav-arrows .nav-arrow.next { background: #6f7fb2; }
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .hotels-grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 200px 200px;
+  }
+}
+@media (max-width: 768px) {
+  .hotels-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+    grid-auto-rows: 180px;
+  }
+  .hotel-card.wide { grid-column: span 2; }
+  .locations-title-area .section-title { font-size: 1.8rem; }
+  .locations-header { flex-direction: column; gap: 1rem; }
+}
+@media (max-width: 480px) {
+  .hotels-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 200px;
+  }
+  .hotel-card.wide,
+  .hotel-card.tall {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
 }

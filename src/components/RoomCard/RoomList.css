@@ -1,6 +1,13 @@
 .room-list-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 32px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
   margin-top: 32px;
+}
+
+@media (max-width: 992px) {
+  .room-list-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .room-list-grid { grid-template-columns: 1fr; }
 }

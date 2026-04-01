@@ -13,7 +13,8 @@ const ActivitiesSlider = ({ slides }) => {
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
-    arrows: false,
+    arrows: false, // keep false so we use custom arrows
+    adaptiveHeight: true,
   };
 
   return (
@@ -24,6 +25,7 @@ const ActivitiesSlider = ({ slides }) => {
           <div key={idx} className="activities-slide">
             <div className="activities-slide-row">
               <div className="activities-slide-info">
+                {
                 <div className="activities-slide-arrows">
                   <button
                     type="button"
@@ -42,6 +44,7 @@ const ActivitiesSlider = ({ slides }) => {
                     →
                   </button>
                 </div>
+                }
                 <h3 className="activities-slide-title">{slide.title}</h3>
                 <p className="activities-slide-desc">{slide.description}</p>
               </div>

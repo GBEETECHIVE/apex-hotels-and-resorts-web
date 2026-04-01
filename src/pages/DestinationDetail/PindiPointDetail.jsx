@@ -1,99 +1,159 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import TouristPointTabs from '../../components/TouristPointTabs/TouristPointTabs';
 import RoomList from '../../components/RoomCard/RoomList';
 import ActivityGalleryCarousel from '../../components/ActivityGalleryCarousel/ActivityGalleryCarousel';
+import BookingFormModal from '../../components/BookingFormModal/BookingFormModal';
 import './DestinationDetail.css';
-
+import StickyBooking from '../../components/StickyBooking/StickyBooking'; 
+import Hero from '../../components/Hero/Hero'; 
 const gallery = [
   'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=600',
   'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=601',
   'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=602',
 ];
 
-const PindiPointDetail = () => (
-  <div className="destination-detail-container">
-    <div className="destination-banner" style={{backgroundImage: `url('https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=1200')`}}>
-      <h1 className="destination-banner-title">Pindi Point, Murree</h1>
-    </div>
-    <TouristPointTabs
-      infoTitle="A Scenic Viewpoint in Murree"
-      infoDescription={
-        <div className="tp-info-layout" style={{display: 'flex', gap: '24px'}}>
-          <div className="tp-info-left">
-            <h1 className="tp-info-title">A Scenic Viewpoint in Murree</h1>
-            <p className="tp-info-desc">
-              Pindi Point is a scenic viewpoint offering breathtaking views of the surrounding hills and valleys. It's ideal for families, couples, and solo travelers, featuring fresh mountain air, scenic views, and cozy moments under the stars. This peaceful spot provides the perfect setting to unwind and connect with nature.
-            </p>
-            <ul className="tp-info-bullets">
-              <li>✔ Scenic & Comfortable Views</li>
-              <li>✔ Hilltop Vantage</li>
-              <li>✔ Nature Walks & Picnic Area</li>
-              <li>✔ Local Food Stalls</li>
-            </ul>
-          </div>
-          <div className="tp-info-gallery">
-            <div className="tp-info-gallery-grid">
-              {/* One tall image in left column, two single images stacked in right column */}
-              <img src={gallery[0]} alt="Gallery Tall" className="tp-info-gallery-img double" />
-              <img src={gallery[1]} alt="Gallery Single 1" className="tp-info-gallery-img single" />
-              <img src={gallery[2]} alt="Gallery Single 2" className="tp-info-gallery-img single" />
+const PindiPointDetail = () => {
+  // Add state for active slide
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [showStickyBooking, setShowStickyBooking] = useState(false);
+  const heroRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!heroRef.current) return;
+      const heroRect = heroRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+      const heroHeight = heroRect.height;
+      const scrolled = Math.max(0, -heroRect.top);
+      if (scrolled > heroHeight * 0.4) {
+        setShowStickyBooking(true);
+      } else {
+        setShowStickyBooking(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  // Define hero slides data
+  const heroSlides = [
+    'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=1200',
+    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200',
+    // Add more slide URLs as needed
+  ];
+
+  // Booking form state
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingRoom, setBookingRoom] = useState(null);
+
+  // Handler to show booking form for a room
+  const handleBookRoom = (room) => {
+    setBookingRoom(room);
+    setShowBookingForm(true);
+  };
+  // Handler to close booking form
+  const handleCloseBookingForm = () => {
+    setShowBookingForm(false);
+    setBookingRoom(null);
+  };
+
+  return (
+    <div className="destination-detail-container">
+      {showStickyBooking && <StickyBooking />}
+      <div ref={heroRef}>
+        <Hero slides={heroSlides} activeSlide={activeSlide} setActiveSlide={setActiveSlide} />
+      </div>
+
+      {/* <div className="destination-banner" style={{backgroundImage: `url('https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=1200')`}}>
+        <h1 className="destination-banner-title">Pindi Point, Murree</h1>
+      </div> */}
+      <TouristPointTabs
+        infoTitle="A Scenic Viewpoint in Murree"
+        infoDescription={
+          <div className="tp-info-layout" style={{display: 'flex', gap: '24px'}}>
+            <div className="tp-info-left">
+              <h1 className="tp-info-title">A Scenic Viewpoint in Murree</h1>
+              <p className="tp-info-desc">
+                Pindi Point is a scenic viewpoint offering breathtaking views of the surrounding hills and valleys. It's ideal for families, couples, and solo travelers, featuring fresh mountain air, scenic views, and cozy moments under the stars. This peaceful spot provides the perfect setting to unwind and connect with nature.
+              </p>
+              <ul className="tp-info-bullets">
+                <li>✔ Scenic & Comfortable Views</li>
+                <li>✔ Hilltop Vantage</li>
+                <li>✔ Nature Walks & Picnic Area</li>
+                <li>✔ Local Food Stalls</li>
+              </ul>
+            </div>
+            <div className="tp-info-gallery">
+              <div className="tp-info-gallery-grid">
+                {/* One tall image in left column, two single images stacked in right column */}
+                <img src={gallery[0]} alt="Gallery Tall" className="tp-info-gallery-img double" />
+                <img src={gallery[1]} alt="Gallery Single 1" className="tp-info-gallery-img single" />
+                <img src={gallery[2]} alt="Gallery Single 2" className="tp-info-gallery-img single" />
+              </div>
             </div>
           </div>
-        </div>
-      }
-      roomsContent={
-        <RoomList
-          rooms={[
-            {
-              image: gallery[0],
-              title: 'Standard Nook',
-              price: '8,000',
-              amenities: [
-                { icon: '🍳', label: 'Free Breakfast' },
-                { icon: '☕', label: 'Tea Setup' },
-                { icon: '📺', label: 'TV' },
-                { icon: '📶', label: 'Free Wifi' },
-                { icon: '🛁', label: 'Bathroom Amenities' },
-                { icon: '🪟', label: 'Window' },
-              ],
-              onBook: () => alert('Book Standard Nook'),
-              onGallery: () => alert('View Gallery'),
-            },
-            {
-              image: gallery[1],
-              title: 'Deluxe Escape',
-              price: '10,000',
-              amenities: [
-                { icon: '🍳', label: 'Free Breakfast' },
-                { icon: '☕', label: 'Tea Setup' },
-                { icon: '📺', label: 'TV' },
-                { icon: '📶', label: 'Free Wifi' },
-                { icon: '🛁', label: 'Bathroom Amenities' },
-                { icon: '🪟', label: 'Window' },
-                { icon: '❄️', label: 'AC' },
-              ],
-              onBook: () => alert('Book Deluxe Escape'),
-              onGallery: () => alert('View Gallery'),
-            },
-            {
-              image: gallery[2],
-              title: 'The Suite Spot',
-              price: '12,000',
-              amenities: [
-                { icon: '🍳', label: 'Free Breakfast' },
-                { icon: '☕', label: 'Tea Setup' },
-                { icon: '📺', label: 'TV' },
-                { icon: '📶', label: 'Free Wifi' },
-                { icon: '🛁', label: 'Bathroom Amenities' },
-                { icon: '🪟', label: 'Window' },
-                { icon: '❄️', label: 'AC' },
-              ],
-              onBook: () => alert('Book The Suite Spot'),
-              onGallery: () => alert('View Gallery'),
-            },
-          ]}
-        />
-      }
+        }
+        roomsContent={
+          <>
+            <RoomList
+              rooms={[
+                {
+                  image: gallery[0],
+                  title: 'Standard Nook',
+                  price: '8,000',
+                  amenities: [
+                    { icon: '🍳', label: 'Free Breakfast' },
+                    { icon: '☕', label: 'Tea Setup' },
+                    { icon: '📺', label: 'TV' },
+                    { icon: '📶', label: 'Free Wifi' },
+                    { icon: '🛁', label: 'Bathroom Amenities' },
+                    { icon: '🪟', label: 'Window' },
+                  ],
+                  onBook: () => handleBookRoom({ title: 'Standard Nook' }),
+                  onGallery: () => alert('View Gallery'),
+                },
+                {
+                  image: gallery[1],
+                  title: 'Deluxe Escape',
+                  price: '10,000',
+                  amenities: [
+                    { icon: '🍳', label: 'Free Breakfast' },
+                    { icon: '☕', label: 'Tea Setup' },
+                    { icon: '📺', label: 'TV' },
+                    { icon: '📶', label: 'Free Wifi' },
+                    { icon: '🛁', label: 'Bathroom Amenities' },
+                    { icon: '🪟', label: 'Window' },
+                    { icon: '❄️', label: 'AC' },
+                  ],
+                  onBook: () => handleBookRoom({ title: 'Deluxe Escape' }),
+                  onGallery: () => alert('View Gallery'),
+                },
+                {
+                  image: gallery[2],
+                  title: 'The Suite Spot',
+                  price: '12,000',
+                  amenities: [
+                    { icon: '🍳', label: 'Free Breakfast' },
+                    { icon: '☕', label: 'Tea Setup' },
+                    { icon: '📺', label: 'TV' },
+                    { icon: '📶', label: 'Free Wifi' },
+                    { icon: '🛁', label: 'Bathroom Amenities' },
+                    { icon: '🪟', label: 'Window' },
+                    { icon: '❄️', label: 'AC' },
+                  ],
+                  onBook: () => handleBookRoom({ title: 'The Suite Spot' }),
+                  onGallery: () => alert('View Gallery'),
+                },
+              ]}
+            />
+            {showBookingForm && (
+              <BookingFormModal
+                room={bookingRoom}
+                resort="Pindi Point, Murree"
+                onClose={handleCloseBookingForm}
+              />
+            )}
+          </>
+        }
       activitiesContent={
         <div>
           <ActivityGalleryCarousel
@@ -138,6 +198,7 @@ const PindiPointDetail = () => (
       galleryImages={gallery}
     />
   </div>
-);
+  );
+};
 
 export default PindiPointDetail;

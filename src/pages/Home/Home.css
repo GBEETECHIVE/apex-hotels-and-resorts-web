@@ -979,7 +979,7 @@
 }
 
 /* Contact Section */
-.contact-section {
+/* .contact-section {
   padding: 100px 0;
   background: white;
 }
@@ -1030,7 +1030,7 @@
 
 .btn-submit:hover {
   background: #1a2530;
-}
+} */
 
 /* Responsive */
 @media (max-width: 1200px) {

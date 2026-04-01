@@ -32,6 +32,38 @@
   .dinein-arrow { width: 48px; height: 48px; }
 }
 
+@media (max-width: 600px) {
+  .dinein-header { flex-direction: column; gap: 1rem; }
+  .dinein-title-area .section-title { font-size: 1.5rem; }
+  .dinein-track { gap: 0.5rem; padding: 0.5rem 0 1rem; }
+  .dine-card { flex: 0 0 90vw; max-width: 98vw; }
+  .dine-image { height: 180px; }
+  .dine-info { padding: 0.7rem; }
+  .dine-info h3 { font-size: 1rem; }
+  .dine-info p { font-size: 0.85rem; }
+  .dinein-arrow {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+    top: unset;
+    bottom: 12px;
+    transform: none;
+    position: absolute;
+  }
+  .dinein-arrow.prev {
+    left: 12px;
+    right: unset;
+  }
+  .dinein-arrow.next {
+    right: 12px;
+    left: unset;
+  }
+  .dinein-grid {
+    position: relative;
+    min-height: 200px;
+  }
+}
+
 @media (min-width: 1200px) {
   .dinein-title-area { text-align: center; }
   .dine-card { flex: 0 0 360px; }

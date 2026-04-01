@@ -2,7 +2,10 @@
 import React from 'react';
 import './AppSection.css';
 
-const AppSection = () => {
+const AppSection = ({ data }) => {
+  const title = data?.title || 'FAST CHECK IN APP';
+  const description = data?.description || 'A Three-Step Feature For A Contactless And Hassle-Free Check-In Process.\nDownload Our App & Book A Room Now!';
+
   return (
     <section className="app-section fast-checkin-section">
       <div className="fast-checkin-content">
@@ -10,10 +13,9 @@ const AppSection = () => {
           <img src="/app-section/phone1.png" alt="Phone Mockup" className="phone-img-single" />
         </div>
         <div className="fast-checkin-text">
-          <h2>FAST CHECK IN APP</h2>
+          <h2>{title}</h2>
           <p className="fast-checkin-desc">
-            A Three-Step Feature For A Contactless And Hassle-Free Check-In Process.<br />
-            Download Our App & Book A Room Now!
+            {description.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>)}
           </p>
           <div className="fast-checkin-badges">
             <a href="#google" className="store-badge">

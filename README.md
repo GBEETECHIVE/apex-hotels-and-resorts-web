@@ -42,9 +42,49 @@ The app will open at [http://localhost:3000](http://localhost:3000)
 ## Available Scripts
 
 - `npm start` - Runs the app in development mode
+- `npm run server` - Runs the Express SMTP/CMS backend on port 5001
 - `npm build` - Builds the app for production
 - `npm test` - Launches the test runner
 - `npm eject` - Ejects from Create React App (one-way operation)
+
+## CMS + Admin Panel
+
+The project now supports a dynamic destination CMS backed by JSON data and admin APIs.
+
+- Public CMS endpoint: `GET /api/cms`
+- Admin CMS save endpoint: `PUT /api/admin/cms` (requires `x-admin-key`)
+- Admin bookings endpoint: `GET /api/admin/bookings` (requires `x-admin-key`)
+- Admin booking status update: `PATCH /api/admin/bookings/:id/status` (requires `x-admin-key`)
+
+### Run locally
+
+1. Start backend:
+
+```bash
+npm run server
+```
+
+2. Start frontend in another terminal:
+
+```bash
+npm start
+```
+
+### Admin UI
+
+- Open `http://localhost:3000/admin/cms`
+- Paste your `ADMIN_API_KEY`
+- Edit JSON to manage:
+	- Explore destination cards
+	- Small tourist point cards under each destination
+	- Hero slides and tab content (info, rooms, activities, gallery)
+
+### Data Source
+
+- CMS data file: `server/data/cms.json`
+- Bookings log file: `server/data/bookings.json`
+
+Both are local data files (ignored by git).
 
 ## Project Structure
 
