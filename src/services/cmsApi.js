@@ -1,14 +1,18 @@
 const requestJson = async (url, options, fallbackMessage) => {
   const response = await fetch(url, options);
-  const payload = await response.json().catch(() => ({}));
+  const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const error = new Error(payload.error || fallbackMessage);
+    const payloadMessage = payload && typeof payload === 'object' ? payload.error : '';
+    const fallbackByStatus = response.status === 413
+      ? 'Uploaded images are too large. Please use fewer/smaller images and try again.'
+      : fallbackMessage;
+    const error = new Error(payloadMessage || fallbackByStatus || `Request failed (${response.status})`);
     error.status = response.status;
     throw error;
   }
 
-  return payload;
+  return payload || {};
 };
 
 export const fetchCms = async () => requestJson('/api/cms', undefined, 'Failed to load CMS data');

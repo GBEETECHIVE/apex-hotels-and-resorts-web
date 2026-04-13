@@ -19,11 +19,25 @@ const toSlug = (value) =>
 
 const splitLines = (value) =>
   String(value || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+    .split('\n');
 
-const joinLines = (items) => (Array.isArray(items) ? items.join('\n') : '');
+const joinLines = (items) => {
+  if (Array.isArray(items)) return items.join('\n');
+  if (typeof items === 'string') return items;
+  return '';
+};
+
+const cleanLines = (items) => {
+  const source = Array.isArray(items) ? items : splitLines(items);
+  return source.map((line) => String(line || '').trim()).filter(Boolean);
+};
+
+const readImageFile = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(new Error('Failed to read image file.'));
+  reader.readAsDataURL(file);
+});
 
 /* ── NAV_ITEMS ─────────────────────────────────────── */
 const NAV_ITEMS = [
@@ -164,6 +178,26 @@ const AdminCMS = () => {
     }));
   };
 
+  const handleDestinationCardImageUpload = async (file) => {
+    if (!selectedDestination || !file) return;
+    try {
+      const imageData = await readImageFile(file);
+      patchDestination(selectedDestination.id, (d) => ({ ...d, cardImage: imageData }));
+    } catch (err) {
+      setError(err.message || 'Unable to upload destination image.');
+    }
+  };
+
+  const handlePointCardImageUpload = async (file) => {
+    if (!selectedDestination || !selectedPoint || !file) return;
+    try {
+      const imageData = await readImageFile(file);
+      patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, cardImage: imageData }));
+    } catch (err) {
+      setError(err.message || 'Unable to upload point image.');
+    }
+  };
+
   const addDestination = () => {
     const id = `destination-${Date.now()}`;
     setCmsData((prev) => ({
@@ -229,6 +263,50 @@ const AdminCMS = () => {
       ...p,
       tabs: { ...(p.tabs || {}), [field]: value },
     }));
+  };
+
+  const uploadTabImages = async (field, files) => {
+    if (!files?.length) return;
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(readImageFile));
+      const current = cleanLines(selectedPoint?.tabs?.[field] || []);
+      patchTabs(field, [...current, ...uploaded]);
+    } catch (err) {
+      setError(err.message || 'Unable to upload images.');
+    }
+  };
+
+  const removeTabImageAt = (field, idx) => {
+    const current = cleanLines(selectedPoint?.tabs?.[field] || []);
+    patchTabs(field, current.filter((_, i) => i !== idx));
+  };
+
+  const uploadRoomImages = async (roomIdx, files) => {
+    if (!files?.length) return;
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(readImageFile));
+      const rooms = selectedPoint?.tabs?.rooms || [];
+      const current = cleanLines(Array.isArray(rooms[roomIdx]?.images) ? rooms[roomIdx].images : (rooms[roomIdx]?.image ? [rooms[roomIdx].image] : []));
+      updateRoom(roomIdx, 'images', [...current, ...uploaded]);
+    } catch (err) {
+      setError(err.message || 'Unable to upload room images.');
+    }
+  };
+
+  const removeRoomImageAt = (roomIdx, imgIdx) => {
+    const rooms = selectedPoint?.tabs?.rooms || [];
+    const current = cleanLines(Array.isArray(rooms[roomIdx]?.images) ? rooms[roomIdx].images : (rooms[roomIdx]?.image ? [rooms[roomIdx].image] : []));
+    updateRoom(roomIdx, 'images', current.filter((_, i) => i !== imgIdx));
+  };
+
+  const uploadActivityImageAt = async (activityIdx, imageIdx, file) => {
+    if (!file) return;
+    try {
+      const imageData = await readImageFile(file);
+      updateActivityImage(activityIdx, imageIdx, imageData);
+    } catch (err) {
+      setError(err.message || 'Unable to upload activity image.');
+    }
   };
 
   // rooms
@@ -360,12 +438,13 @@ const AdminCMS = () => {
   /* ── SECTION RENDERS ───────────────────────────── */
 
   const renderDashboard = () => (
-    <div className="panel-section">
+    <div className="panel-section dashboard-panel">
       <h2 className="section-title">Dashboard Overview</h2>
+      <p className="section-desc dashboard-desc">Live snapshot of your content with quick admin actions.</p>
       <div className="stats-grid">
-        <div className="stat-card blue"><span className="stat-icon">🏔️</span><div><div className="stat-number">{stats.destinations}</div><div className="stat-label">Destinations</div></div></div>
-        <div className="stat-card green"><span className="stat-icon">📍</span><div><div className="stat-number">{stats.points}</div><div className="stat-label">Tourist Points</div></div></div>
-        <div className="stat-card orange"><span className="stat-icon">📋</span><div><div className="stat-number">{stats.bookings}</div><div className="stat-label">Bookings</div></div></div>
+        <div className="stat-card blue"><span className="stat-icon">🏔️</span><div className="stat-content"><div className="stat-number">{stats.destinations}</div><div className="stat-label">Destinations</div></div></div>
+        <div className="stat-card green"><span className="stat-icon">📍</span><div className="stat-content"><div className="stat-number">{stats.points}</div><div className="stat-label">Tourist Points</div></div></div>
+        <div className="stat-card orange"><span className="stat-icon">📋</span><div className="stat-content"><div className="stat-number">{stats.bookings}</div><div className="stat-label">Bookings</div></div></div>
       </div>
       <div className="quick-actions">
         <button className="btn primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : '💾 Save All Changes'}</button>
@@ -400,7 +479,7 @@ const AdminCMS = () => {
           </div>
           {(hero.slides || []).length > 0 && (
             <div className="image-preview-grid full">
-              {hero.slides.map((url, i) => (
+              {cleanLines(hero.slides).map((url, i) => (
                 <div key={i} className="img-thumb"><img src={url} alt={`Slide ${i + 1}`} /><span>Slide {i + 1}</span></div>
               ))}
             </div>
@@ -581,14 +660,33 @@ const AdminCMS = () => {
             <textarea rows={4} value={joinLines(tabs.infoBullets || [])} onChange={(e) => patchTabs('infoBullets', splitLines(e.target.value))} placeholder="Comfortable Rooms & Eco-Friendly&#10;Resort Located 8 Minutes from Airport&#10;Beautiful Mountain Views" />
           </div>
           <div className="form-group full">
-            <label>Information Images (3 recommended — one URL per line)</label>
-            <textarea rows={4} value={joinLines(tabs.infoGallery || [])} onChange={(e) => patchTabs('infoGallery', splitLines(e.target.value))} placeholder="https://images.unsplash.com/...&#10;https://images.unsplash.com/...&#10;https://images.unsplash.com/..." />
+            <label>Information Images (3 recommended)</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={async (e) => {
+                await uploadTabImages('infoGallery', e.target.files);
+                e.target.value = '';
+              }}
+            />
           </div>
           {(tabs.infoGallery || []).length > 0 && (
             <div className="image-preview-grid full">
-              {(tabs.infoGallery || []).map((url, i) => (
-                <div key={i} className="img-thumb"><img src={url} alt={`Info ${i + 1}`} /><span>Image {i + 1}</span></div>
+              {cleanLines(tabs.infoGallery).map((url, i) => (
+                <div key={i} className="img-thumb">
+                  <img src={url} alt={`Info ${i + 1}`} />
+                  <span>Image {i + 1}</span>
+                  <button className="btn-icon danger" type="button" onClick={() => removeTabImageAt('infoGallery', i)}>✕</button>
+                </div>
               ))}
+            </div>
+          )}
+          {cleanLines(tabs.infoGallery).length > 0 && (
+            <div className="form-group full">
+              <button className="btn small outline" type="button" onClick={() => patchTabs('infoGallery', [])}>
+                Remove All Information Images
+              </button>
             </div>
           )}
         </div>
@@ -623,17 +721,33 @@ const AdminCMS = () => {
 
                 {/* Room Images */}
                 <div className="form-group full">
-                  <label>Room Images (one URL per line)</label>
-                  <textarea rows={3}
-                    value={joinLines(Array.isArray(room.images) ? room.images : (room.image ? [room.image] : []))}
-                    onChange={(e) => updateRoom(rIdx, 'images', splitLines(e.target.value))}
-                    placeholder="https://images.unsplash.com/..." />
+                  <label>Room Images</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={async (e) => {
+                      await uploadRoomImages(rIdx, e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
                 </div>
-                {(Array.isArray(room.images) ? room.images : (room.image ? [room.image] : [])).length > 0 && (
+                {cleanLines(Array.isArray(room.images) ? room.images : (room.image ? [room.image] : [])).length > 0 && (
                   <div className="image-preview-grid full">
-                    {(Array.isArray(room.images) ? room.images : [room.image]).filter(Boolean).map((url, i) => (
-                      <div key={i} className="img-thumb"><img src={url} alt={`Room ${rIdx + 1} img ${i + 1}`} /><span>Img {i + 1}</span></div>
+                    {cleanLines(Array.isArray(room.images) ? room.images : [room.image]).map((url, i) => (
+                      <div key={i} className="img-thumb">
+                        <img src={url} alt={`Room ${rIdx + 1} img ${i + 1}`} />
+                        <span>Img {i + 1}</span>
+                        <button className="btn-icon danger" type="button" onClick={() => removeRoomImageAt(rIdx, i)}>✕</button>
+                      </div>
                     ))}
+                  </div>
+                )}
+                {cleanLines(Array.isArray(room.images) ? room.images : (room.image ? [room.image] : [])).length > 0 && (
+                  <div className="form-group full">
+                    <button className="btn small outline" type="button" onClick={() => updateRoom(rIdx, 'images', [])}>
+                      Remove All Room Images
+                    </button>
                   </div>
                 )}
 
@@ -687,7 +801,19 @@ const AdminCMS = () => {
                       return (
                         <div key={imgIdx} className="activity-img-slot">
                           <label>Image {imgIdx + 1} {!imgUrl && <span className="required">*</span>}</label>
-                          <input value={imgUrl} onChange={(e) => updateActivityImage(aIdx, imgIdx, e.target.value)} placeholder="https://..." />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              await uploadActivityImageAt(aIdx, imgIdx, e.target.files?.[0]);
+                              e.target.value = '';
+                            }}
+                          />
+                          {imgUrl && (
+                            <button className="btn small outline" type="button" onClick={() => updateActivityImage(aIdx, imgIdx, '')}>
+                              Remove Image
+                            </button>
+                          )}
                           {imgUrl && <img src={imgUrl} alt={`Act ${aIdx + 1} img ${imgIdx + 1}`} className="activity-img-preview" />}
                         </div>
                       );
@@ -715,14 +841,33 @@ const AdminCMS = () => {
             <textarea rows={3} value={tabs.galleryDescription || ''} onChange={(e) => patchTabs('galleryDescription', e.target.value)} placeholder="Explore our beautiful destination..." />
           </div>
           <div className="form-group full">
-            <label>Gallery / Hero Images (one URL per line — these show in the hero section of this destination page)</label>
-            <textarea rows={6} value={joinLines(tabs.galleryImages || [])} onChange={(e) => patchTabs('galleryImages', splitLines(e.target.value))} placeholder="https://images.unsplash.com/..." />
+            <label>Gallery / Hero Images (used in destination hero)</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={async (e) => {
+                await uploadTabImages('galleryImages', e.target.files);
+                e.target.value = '';
+              }}
+            />
           </div>
           {(tabs.galleryImages || []).length > 0 && (
             <div className="image-preview-grid full">
-              {(tabs.galleryImages || []).map((url, i) => (
-                <div key={i} className="img-thumb"><img src={url} alt={`Gallery ${i + 1}`} /><span>Gallery {i + 1}</span></div>
+              {cleanLines(tabs.galleryImages).map((url, i) => (
+                <div key={i} className="img-thumb">
+                  <img src={url} alt={`Gallery ${i + 1}`} />
+                  <span>Gallery {i + 1}</span>
+                  <button className="btn-icon danger" type="button" onClick={() => removeTabImageAt('galleryImages', i)}>✕</button>
+                </div>
               ))}
+            </div>
+          )}
+          {cleanLines(tabs.galleryImages).length > 0 && (
+            <div className="form-group full">
+              <button className="btn small outline" type="button" onClick={() => patchTabs('galleryImages', [])}>
+                Remove All Gallery Images
+              </button>
             </div>
           )}
         </div>
@@ -764,9 +909,19 @@ const AdminCMS = () => {
                       <input value={selectedPoint.slug || ''} onChange={(e) => patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, slug: toSlug(e.target.value) }))} />
                     </div>
                     <div className="form-group full">
-                      <label>Card Image URL</label>
-                      <input value={selectedPoint.cardImage || ''} onChange={(e) => patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, cardImage: e.target.value }))} />
+                      <label>Card Image Upload</label>
+                      <input type="file" accept="image/*" onChange={(e) => handlePointCardImageUpload(e.target.files?.[0])} />
+                      {!!selectedPoint.cardImage && (
+                        <button className="btn small outline" type="button" onClick={() => patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, cardImage: '' }))}>
+                          Remove Current Image
+                        </button>
+                      )}
                     </div>
+                    {!!selectedPoint.cardImage && (
+                      <div className="image-preview-grid full">
+                        <div className="img-thumb large"><img src={selectedPoint.cardImage} alt="Point card" /></div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 4 content tabs */}
@@ -834,8 +989,13 @@ const AdminCMS = () => {
                     <input value={selectedDestination.slug || ''} onChange={(e) => patchDestination(selectedDestination.id, (d) => ({ ...d, slug: toSlug(e.target.value) }))} />
                   </div>
                   <div className="form-group">
-                    <label>Card Image URL</label>
-                    <input value={selectedDestination.cardImage || ''} onChange={(e) => patchDestination(selectedDestination.id, (d) => ({ ...d, cardImage: e.target.value }))} />
+                    <label>Card Image Upload</label>
+                    <input type="file" accept="image/*" onChange={(e) => handleDestinationCardImageUpload(e.target.files?.[0])} />
+                    {!!selectedDestination.cardImage && (
+                      <button className="btn small outline" type="button" onClick={() => patchDestination(selectedDestination.id, (d) => ({ ...d, cardImage: '' }))}>
+                        Remove Current Image
+                      </button>
+                    )}
                   </div>
                   {selectedDestination.cardImage && (
                     <div className="image-preview-grid full">
@@ -848,7 +1008,7 @@ const AdminCMS = () => {
                   </div>
                   {(selectedDestination.heroSlides || []).length > 0 && (
                     <div className="image-preview-grid full">
-                      {selectedDestination.heroSlides.map((url, i) => (
+                      {cleanLines(selectedDestination.heroSlides).map((url, i) => (
                         <div key={i} className="img-thumb"><img src={url} alt={`Slide ${i + 1}`} /><span>Slide {i + 1}</span></div>
                       ))}
                     </div>

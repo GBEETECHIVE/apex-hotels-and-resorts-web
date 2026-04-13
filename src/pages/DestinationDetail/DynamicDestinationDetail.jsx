@@ -9,6 +9,14 @@ import BookingFormModal from '../../components/BookingFormModal/BookingFormModal
 import { fetchCms } from '../../services/cmsApi';
 import './DestinationDetail.css';
 
+const asLineList = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split('\n');
+  return [];
+};
+
+const cleanLineList = (value) => asLineList(value).map((line) => String(line || '').trim()).filter(Boolean);
+
 const DynamicDestinationDetail = () => {
   const { destinationSlug, pointSlug } = useParams();
   const navigate = useNavigate();
@@ -70,10 +78,12 @@ const DynamicDestinationDetail = () => {
   }, [loading, destination, pointSlug, selectedPoint, navigate]);
 
   const heroSlides = selectedPoint?.heroSlides?.length
-    ? selectedPoint.heroSlides
-    : destination?.heroSlides || [];
+    ? cleanLineList(selectedPoint.heroSlides)
+    : cleanLineList(destination?.heroSlides);
 
   const tabs = selectedPoint?.tabs || {};
+  const infoBullets = cleanLineList(tabs.infoBullets);
+  const infoGallery = cleanLineList(tabs.infoGallery);
 
   const roomCards = (tabs.rooms || []).map((room) => ({
     ...room,
@@ -112,15 +122,15 @@ const DynamicDestinationDetail = () => {
               <h1 className="tp-info-title">{tabs.infoTitle || selectedPoint.name}</h1>
               <p className="tp-info-desc">{tabs.infoDescription || 'No description available.'}</p>
               <ul className="tp-info-bullets">
-                {(tabs.infoBullets || []).map((item, idx) => (
+                {infoBullets.map((item, idx) => (
                   <li key={idx}>✔ {item}</li>
                 ))}
               </ul>
             </div>
-            {(tabs.infoGallery || []).length > 0 && (
+            {infoGallery.length > 0 && (
               <div className="tp-info-gallery">
                 <div className="tp-info-gallery-grid">
-                  {(tabs.infoGallery || []).slice(0, 3).map((image, idx) => (
+                  {infoGallery.slice(0, 3).map((image, idx) => (
                     <img
                       key={`${selectedPoint.id}-info-${idx}`}
                       src={image}

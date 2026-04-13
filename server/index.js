@@ -28,7 +28,7 @@ const bookingsFile = path.join(dataDir, 'bookings.json');
 const cmsFile = path.join(dataDir, 'cms.json');
 
 app.use(cors({ origin: frontendOrigin }));
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
 
 const requiredEnv = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'ADMIN_EMAIL', 'FROM_EMAIL'];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
@@ -457,6 +457,15 @@ app.post('/api/bookings', async (req, res) => {
     });
     return res.status(500).json({ error: 'Failed to send booking emails.' });
   }
+});
+
+app.use((err, _req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Uploaded images are too large. Please use fewer/smaller images and try again.',
+    });
+  }
+  return next(err);
 });
 
 const start = async () => {

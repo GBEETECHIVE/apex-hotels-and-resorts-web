@@ -4,23 +4,13 @@ import './ExploreCard.css';
 const ExploreCard = ({ title, image, hotels = [], onExplore }) => {
   const [startIndex, setStartIndex] = useState(0);
   const visibleCount = 2;
-  const hasMultiple = hotels.length > visibleCount;
+  const hasCardImage = Boolean(String(image || '').trim());
 
   const visibleHotels = useMemo(() => {
     if (!hotels.length) return [];
     const count = Math.min(visibleCount, hotels.length);
     return Array.from({ length: count }, (_, index) => hotels[(startIndex + index) % hotels.length]);
   }, [hotels, startIndex]);
-
-  const handlePrev = () => {
-    if (!hotels.length) return;
-    setStartIndex((prev) => (prev - 1 + hotels.length) % hotels.length);
-  };
-
-  const handleNext = () => {
-    if (!hotels.length) return;
-    setStartIndex((prev) => (prev + 1) % hotels.length);
-  };
 
   const handleHotelClick = (hotel) => {
     if (hotel.onClick) {
@@ -34,12 +24,14 @@ const ExploreCard = ({ title, image, hotels = [], onExplore }) => {
 
   return (
     <div className="explore-card" style={{ position: 'relative' }}>
-<div
-  className="explore-card-gradient-bg"
-  style={{
-    backgroundImage: `linear-gradient(180deg, rgba(45, 48, 56, 0.3) 0%, rgba(0, 0, 0, 0.9) 100%), url(${image})`,
-  }}
-/>
+      <div
+        className="explore-card-gradient-bg"
+        style={{
+          backgroundImage: hasCardImage
+            ? `linear-gradient(180deg, rgba(45, 48, 56, 0.3) 0%, rgba(0, 0, 0, 0.9) 100%), url(${image})`
+            : 'linear-gradient(180deg, rgba(45, 48, 56, 0.45) 0%, rgba(0, 0, 0, 0.9) 100%)',
+        }}
+      />
       <div className="explore-card-overlay">
         <div className="explore-card-title-center">
           <h2 className="explore-card-title">{title}</h2>
@@ -62,7 +54,9 @@ const ExploreCard = ({ title, image, hotels = [], onExplore }) => {
                 onClick={() => handleHotelClick(hotel)}
               >
                 <div className="explore-card-hotel">
-                  <img src={hotel.image} alt={hotel.name} className="explore-card-hotel-img" />
+                  {String(hotel.image || '').trim() && (
+                    <img src={hotel.image} alt={hotel.name} className="explore-card-hotel-img" />
+                  )}
                   <div className="explore-card-hotel-name">{hotel.name}</div>
                 </div>
               </button>
