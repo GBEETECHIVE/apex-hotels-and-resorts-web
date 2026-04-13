@@ -910,6 +910,14 @@
   border: 1px solid var(--border);
 }
 
+.img-size-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  text-align: center;
+}
+
 /* ─── MISC BUTTON HELPERS ─────────────────────────── */
 .btn-icon {
   width: 30px;

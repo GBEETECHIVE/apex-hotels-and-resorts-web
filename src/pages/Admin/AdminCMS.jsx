@@ -32,11 +32,42 @@ const cleanLines = (items) => {
   return source.map((line) => String(line || '').trim()).filter(Boolean);
 };
 
-const readImageFile = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(String(reader.result || ''));
-  reader.onerror = () => reject(new Error('Failed to read image file.'));
-  reader.readAsDataURL(file);
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
+
+const getBase64SizeMb = (dataUrl) => {
+  if (!dataUrl || !dataUrl.startsWith('data:')) return '';
+  const base64 = dataUrl.split(',')[1] || '';
+  const bytes = Math.ceil(base64.length * 0.75);
+  const kb = bytes / 1024;
+  return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`;
+};
+
+const compressImageFile = (file) => new Promise((resolve, reject) => {
+  if (file.size > MAX_IMAGE_BYTES) {
+    return reject(new Error(`"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB — each image must be 4 MB or smaller.`));
+  }
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    const MAX_DIM = 1920;
+    let { width, height } = img;
+    if (width > MAX_DIM || height > MAX_DIM) {
+      const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    resolve(canvas.toDataURL('image/jpeg', 0.78));
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error(`Failed to load "${file.name}".`));
+  };
+  img.src = objectUrl;
 });
 
 /* ── NAV_ITEMS ─────────────────────────────────────── */
@@ -178,10 +209,33 @@ const AdminCMS = () => {
     }));
   };
 
+  const uploadImage = async (file) => {
+    const base64 = await compressImageFile(file);
+    const result = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ image: base64 }),
+    });
+    const raw = await result.text();
+    let payload = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (_error) {
+      payload = {};
+    }
+    if (!result.ok) {
+      const fallback = result.status === 404
+        ? 'Upload endpoint not found. Restart backend server and try again.'
+        : `Failed to upload image to server (${result.status}).`;
+      throw new Error(payload.error || raw || fallback);
+    }
+    return payload.url;
+  };
+
   const handleDestinationCardImageUpload = async (file) => {
     if (!selectedDestination || !file) return;
     try {
-      const imageData = await readImageFile(file);
+      const imageData = await uploadImage(file);
       patchDestination(selectedDestination.id, (d) => ({ ...d, cardImage: imageData }));
     } catch (err) {
       setError(err.message || 'Unable to upload destination image.');
@@ -191,7 +245,7 @@ const AdminCMS = () => {
   const handlePointCardImageUpload = async (file) => {
     if (!selectedDestination || !selectedPoint || !file) return;
     try {
-      const imageData = await readImageFile(file);
+      const imageData = await uploadImage(file);
       patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, cardImage: imageData }));
     } catch (err) {
       setError(err.message || 'Unable to upload point image.');
@@ -268,7 +322,7 @@ const AdminCMS = () => {
   const uploadTabImages = async (field, files) => {
     if (!files?.length) return;
     try {
-      const uploaded = await Promise.all(Array.from(files).map(readImageFile));
+      const uploaded = await Promise.all(Array.from(files).map(uploadImage));
       const current = cleanLines(selectedPoint?.tabs?.[field] || []);
       patchTabs(field, [...current, ...uploaded]);
     } catch (err) {
@@ -284,7 +338,7 @@ const AdminCMS = () => {
   const uploadRoomImages = async (roomIdx, files) => {
     if (!files?.length) return;
     try {
-      const uploaded = await Promise.all(Array.from(files).map(readImageFile));
+      const uploaded = await Promise.all(Array.from(files).map(uploadImage));
       const rooms = selectedPoint?.tabs?.rooms || [];
       const current = cleanLines(Array.isArray(rooms[roomIdx]?.images) ? rooms[roomIdx].images : (rooms[roomIdx]?.image ? [rooms[roomIdx].image] : []));
       updateRoom(roomIdx, 'images', [...current, ...uploaded]);
@@ -302,7 +356,7 @@ const AdminCMS = () => {
   const uploadActivityImageAt = async (activityIdx, imageIdx, file) => {
     if (!file) return;
     try {
-      const imageData = await readImageFile(file);
+      const imageData = await uploadImage(file);
       updateActivityImage(activityIdx, imageIdx, imageData);
     } catch (err) {
       setError(err.message || 'Unable to upload activity image.');
@@ -676,7 +730,7 @@ const AdminCMS = () => {
               {cleanLines(tabs.infoGallery).map((url, i) => (
                 <div key={i} className="img-thumb">
                   <img src={url} alt={`Info ${i + 1}`} />
-                  <span>Image {i + 1}</span>
+                  <span>Image {i + 1}{getBase64SizeMb(url) ? ` · ${getBase64SizeMb(url)}` : ''}</span>
                   <button className="btn-icon danger" type="button" onClick={() => removeTabImageAt('infoGallery', i)}>✕</button>
                 </div>
               ))}
@@ -737,7 +791,7 @@ const AdminCMS = () => {
                     {cleanLines(Array.isArray(room.images) ? room.images : [room.image]).map((url, i) => (
                       <div key={i} className="img-thumb">
                         <img src={url} alt={`Room ${rIdx + 1} img ${i + 1}`} />
-                        <span>Img {i + 1}</span>
+                        <span>Img {i + 1}{getBase64SizeMb(url) ? ` · ${getBase64SizeMb(url)}` : ''}</span>
                         <button className="btn-icon danger" type="button" onClick={() => removeRoomImageAt(rIdx, i)}>✕</button>
                       </div>
                     ))}
@@ -815,6 +869,7 @@ const AdminCMS = () => {
                             </button>
                           )}
                           {imgUrl && <img src={imgUrl} alt={`Act ${aIdx + 1} img ${imgIdx + 1}`} className="activity-img-preview" />}
+                          {imgUrl && getBase64SizeMb(imgUrl) && <span className="img-size-label">{getBase64SizeMb(imgUrl)}</span>}
                         </div>
                       );
                     })}
@@ -857,7 +912,7 @@ const AdminCMS = () => {
               {cleanLines(tabs.galleryImages).map((url, i) => (
                 <div key={i} className="img-thumb">
                   <img src={url} alt={`Gallery ${i + 1}`} />
-                  <span>Gallery {i + 1}</span>
+                  <span>Gallery {i + 1}{getBase64SizeMb(url) ? ` · ${getBase64SizeMb(url)}` : ''}</span>
                   <button className="btn-icon danger" type="button" onClick={() => removeTabImageAt('galleryImages', i)}>✕</button>
                 </div>
               ))}
@@ -919,7 +974,10 @@ const AdminCMS = () => {
                     </div>
                     {!!selectedPoint.cardImage && (
                       <div className="image-preview-grid full">
-                        <div className="img-thumb large"><img src={selectedPoint.cardImage} alt="Point card" /></div>
+                        <div className="img-thumb large">
+                          <img src={selectedPoint.cardImage} alt="Point card" />
+                          {getBase64SizeMb(selectedPoint.cardImage) && <span>{getBase64SizeMb(selectedPoint.cardImage)}</span>}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -999,7 +1057,10 @@ const AdminCMS = () => {
                   </div>
                   {selectedDestination.cardImage && (
                     <div className="image-preview-grid full">
-                      <div className="img-thumb large"><img src={selectedDestination.cardImage} alt="Card" /></div>
+                      <div className="img-thumb large">
+                        <img src={selectedDestination.cardImage} alt="Card" />
+                        {getBase64SizeMb(selectedDestination.cardImage) && <span>{getBase64SizeMb(selectedDestination.cardImage)}</span>}
+                      </div>
                     </div>
                   )}
                   <div className="form-group full">

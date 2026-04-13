@@ -163,6 +163,8 @@ const DynamicDestinationDetail = () => {
             <ActivityGalleryCarousel slides={tabs.activities || []} />
           </div>
         }
+        galleryTitle={tabs.galleryTitle || 'GALLERY & IMAGES'}
+        galleryDescription={tabs.galleryDescription || 'Browse the best views and moments from our property and surroundings.'}
         galleryImages={tabs.galleryImages || []}
       />
 

@@ -5,7 +5,7 @@ const requestJson = async (url, options, fallbackMessage) => {
   if (!response.ok) {
     const payloadMessage = payload && typeof payload === 'object' ? payload.error : '';
     const fallbackByStatus = response.status === 413
-      ? 'Uploaded images are too large. Please use fewer/smaller images and try again.'
+      ? 'Total upload is too large. Each image must be 4 MB or smaller — please reduce image sizes and try again.'
       : fallbackMessage;
     const error = new Error(payloadMessage || fallbackByStatus || `Request failed (${response.status})`);
     error.status = response.status;

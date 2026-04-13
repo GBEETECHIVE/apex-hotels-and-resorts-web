@@ -26,9 +26,13 @@ const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '12h';
 const dataDir = path.join(__dirname, 'data');
 const bookingsFile = path.join(dataDir, 'bookings.json');
 const cmsFile = path.join(dataDir, 'cms.json');
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
 
 app.use(cors({ origin: frontendOrigin }));
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use('/uploads', express.static(uploadsDir, { maxAge: '30d' }));
 
 const requiredEnv = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'ADMIN_EMAIL', 'FROM_EMAIL'];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
@@ -288,6 +292,42 @@ app.get('/api/cms', (_req, res) => {
     });
 });
 
+app.post('/api/admin/upload', authorizeAdmin, (req, res) => {
+  const { image } = req.body || {};
+  if (!image || !String(image).startsWith('data:image/')) {
+    return res.status(400).json({ error: 'Invalid image data.' });
+  }
+  const matches = String(image).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/);
+  if (!matches) {
+    return res.status(400).json({ error: 'Invalid image format.' });
+  }
+  const mimeType = matches[1].toLowerCase();
+  const mimeToExt = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/avif': 'avif',
+    'image/bmp': 'bmp',
+    'image/tiff': 'tiff',
+    'image/svg+xml': 'svg',
+    'image/x-icon': 'ico',
+    'image/vnd.microsoft.icon': 'ico',
+  };
+  const ext = mimeToExt[mimeType] || 'img';
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+  const filepath = path.join(uploadsDir, filename);
+  try {
+    const normalizedBase64 = matches[2].replace(/\s+/g, '');
+    fs.writeFileSync(filepath, Buffer.from(normalizedBase64, 'base64'));
+    return res.json({ url: `/uploads/${filename}` });
+  } catch (err) {
+    console.error('Failed to save uploaded image:', err);
+    return res.status(500).json({ error: 'Failed to save image file.' });
+  }
+});
+
 app.put('/api/admin/cms', authorizeAdmin, (req, res) => {
   const cmsPayload = req.body;
   if (!cmsPayload || typeof cmsPayload !== 'object') {
@@ -462,7 +502,7 @@ app.post('/api/bookings', async (req, res) => {
 app.use((err, _req, res, next) => {
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({
-      error: 'Uploaded images are too large. Please use fewer/smaller images and try again.',
+      error: 'Total upload is too large. Each image must be 4 MB or smaller — please reduce image sizes and try again.',
     });
   }
   return next(err);
