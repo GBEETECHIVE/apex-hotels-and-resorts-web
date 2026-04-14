@@ -32,15 +32,16 @@ cd roomy
 npm install
 ```
 
-3. Start the development server
+3. Start frontend + backend together
 ```bash
-npm start
+npm run dev
 ```
 
 The app will open at [http://localhost:3000](http://localhost:3000)
 
 ## Available Scripts
 
+- `npm run dev` - Runs frontend (3000) and backend (5001) together
 - `npm start` - Runs the app in development mode
 - `npm run server` - Runs the Express SMTP/CMS backend on port 5001
 - `npm build` - Builds the app for production
@@ -58,13 +59,17 @@ The project now supports a dynamic destination CMS backed by JSON data and admin
 
 ### Run locally
 
-1. Start backend:
+1. Start both services with one command (recommended):
+
+```bash
+npm run dev
+```
+
+2. Or run backend and frontend in separate terminals:
 
 ```bash
 npm run server
 ```
-
-2. Start frontend in another terminal:
 
 ```bash
 npm start
