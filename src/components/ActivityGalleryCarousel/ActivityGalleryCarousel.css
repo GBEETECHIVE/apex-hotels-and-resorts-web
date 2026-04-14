@@ -1,5 +1,6 @@
 .activity-gallery-carousel {
   width: 100%;
+  margin-bottom: 40px;
 }
 
 .activity-gallery-columns {
@@ -20,6 +21,16 @@
   height: 470px;
   object-fit: cover;
   display: block;
+}
+
+.activity-gallery-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 470px;
+  background: #eef1f8;
+  color: #52607d;
+  font-size: 1rem;
 }
 
 .activity-arrow {
@@ -72,6 +83,14 @@
   max-width: 60ch;
 }
 
+.activity-gallery-count {
+  margin-top: 20px;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6c7895;
+}
+
 @media (max-width: 1200px) {
   .activity-gallery-columns {
     gap: 32px;
@@ -95,6 +114,10 @@
     height: 360px;
   }
 
+  .activity-gallery-empty {
+    min-height: 360px;
+  }
+
   .activity-arrow-left {
     left: 12px;
   }
@@ -111,6 +134,10 @@
 @media (max-width: 600px) {
   .activity-gallery-main-image {
     height: 260px;
+  }
+
+  .activity-gallery-empty {
+    min-height: 260px;
   }
 
   .activity-arrow {

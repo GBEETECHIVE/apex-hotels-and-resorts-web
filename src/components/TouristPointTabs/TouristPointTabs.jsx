@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import './TouristPointTabs.css';
 import ActivityGalleryCarousel from '../ActivityGalleryCarousel/ActivityGalleryCarousel';
 
-const tabList = [
-  { key: 'info', label: 'Information' },
-  { key: 'rooms', label: 'Rooms' },
-  { key: 'activities', label: 'Activities' },
-  { key: 'gallery', label: 'Gallery & Images' },
-];
-
 const TouristPointTabs = ({
+  destinationContent,
   infoTitle,
   infoDescription,
   infoBullets = [],
@@ -21,6 +15,22 @@ const TouristPointTabs = ({
 }) => {
   const [activeTab, setActiveTab] = useState('info');
   const hasCustomInfoLayout = React.isValidElement(infoDescription);
+  const hasDestinationTab = React.isValidElement(destinationContent);
+
+  const tabList = useMemo(() => {
+    const tabs = [
+      { key: 'info', label: 'Information' },
+      { key: 'rooms', label: 'Rooms' },
+      { key: 'activities', label: 'Activities' },
+      { key: 'gallery', label: 'Gallery & Images' },
+    ];
+
+    if (hasDestinationTab) {
+      tabs.push({ key: 'destination', label: 'Famous Places' });
+    }
+
+    return tabs;
+  }, [hasDestinationTab]);
 
   return (
     <div className="tp-tabs-container">
@@ -36,6 +46,9 @@ const TouristPointTabs = ({
         ))}
       </div>
       <div className="tp-tabs-content">
+        {activeTab === 'destination' && (
+          <div className="tp-info-tab">{destinationContent}</div>
+        )}
         {activeTab === 'info' && (
           <div className="tp-info-tab">
             {hasCustomInfoLayout ? (
@@ -46,7 +59,7 @@ const TouristPointTabs = ({
                 <p className="tp-info-desc">{infoDescription}</p>
                 <ul className="tp-info-bullets">
                   {infoBullets.map((item, idx) => (
-                    <li key={idx}>✔ {item}</li>
+                    <li key={idx}>{item}</li>
                   ))}
                 </ul>
               </>
@@ -67,7 +80,7 @@ const TouristPointTabs = ({
               slides={[{
                 title: galleryTitle || 'GALLERY & IMAGES',
                 description: galleryDescription || 'Browse the best views and moments from our property and surroundings.',
-                images: galleryImages,
+                images: galleryImages.filter(Boolean),
               }]}
             />
           </div>

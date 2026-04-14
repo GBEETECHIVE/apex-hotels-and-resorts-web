@@ -21,6 +21,14 @@ const splitLines = (value) =>
   String(value || '')
     .split('\n');
 
+const stripBulletPrefix = (value) =>
+  String(value || '').replace(/^\s*(?:[•·●▪◦\-*]|✔|✓|☑|✅)+\s*/, '');
+
+const normalizeBulletLines = (items) => {
+  const source = Array.isArray(items) ? items : splitLines(items);
+  return source.map((line) => stripBulletPrefix(line));
+};
+
 const joinLines = (items) => {
   if (Array.isArray(items)) return items.join('\n');
   if (typeof items === 'string') return items;
@@ -256,7 +264,18 @@ const AdminCMS = () => {
     const id = `destination-${Date.now()}`;
     setCmsData((prev) => ({
       ...prev,
-      destinations: [...(prev.destinations || []), { id, name: 'NEW DESTINATION', slug: id, cardImage: '', heroSlides: [], points: [] }],
+      destinations: [...(prev.destinations || []), {
+        id,
+        name: 'NEW DESTINATION',
+        slug: id,
+        cardImage: '',
+        heroSlides: [],
+        destinationInfoTitle: '',
+        destinationInfoDescription: '',
+        destinationInfoBullets: [],
+        destinationInfoGallery: [],
+        points: [],
+      }],
     }));
     setSelectedDestinationId(id);
     setSelectedPointId('');
@@ -335,6 +354,28 @@ const AdminCMS = () => {
     patchTabs(field, current.filter((_, i) => i !== idx));
   };
 
+  const patchDestinationField = (field, value) => {
+    if (!selectedDestination) return;
+    patchDestination(selectedDestination.id, (d) => ({ ...d, [field]: value }));
+  };
+
+  const uploadDestinationInfoImages = async (files) => {
+    if (!selectedDestination || !files?.length) return;
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(uploadImage));
+      const current = cleanLines(selectedDestination.destinationInfoGallery || []);
+      patchDestinationField('destinationInfoGallery', [...current, ...uploaded]);
+    } catch (err) {
+      setError(err.message || 'Unable to upload destination information images.');
+    }
+  };
+
+  const removeDestinationInfoImageAt = (idx) => {
+    if (!selectedDestination) return;
+    const current = cleanLines(selectedDestination.destinationInfoGallery || []);
+    patchDestinationField('destinationInfoGallery', current.filter((_, i) => i !== idx));
+  };
+
   const uploadRoomImages = async (roomIdx, files) => {
     if (!files?.length) return;
     try {
@@ -397,6 +438,11 @@ const AdminCMS = () => {
   const updateActivity = (idx, field, val) => {
     patchTabs('activities', (selectedPoint?.tabs?.activities || []).map((a, i) => i === idx ? { ...a, [field]: val } : a));
   };
+  // famous places
+  const addFamousPlace = () => patchTabs('famousPlaces', [...(selectedPoint?.tabs?.famousPlaces || []), { title: '', description: '' }]);
+  const removeFamousPlace = (idx) => patchTabs('famousPlaces', (selectedPoint?.tabs?.famousPlaces || []).filter((_, i) => i !== idx));
+  const updateFamousPlace = (idx, field, val) => patchTabs('famousPlaces', (selectedPoint?.tabs?.famousPlaces || []).map((p, i) => i === idx ? { ...p, [field]: val } : p));
+
   const updateActivityImage = (aIdx, imgIdx, val) => {
     patchTabs('activities', (selectedPoint?.tabs?.activities || []).map((a, i) => {
       if (i !== aIdx) return a;
@@ -690,13 +736,15 @@ const AdminCMS = () => {
   const renderDestinations = () => {
     const DEST_TABS = [
       { id: 'basic', label: 'Basic Info' },
-      { id: 'points', label: 'Tourist Points' },
+      { id: 'destination-info', label: 'Destination Info' },
+      { id: 'tourist-points', label: 'Tourist Points' },
     ];
     const POINT_TABS = [
       { id: 'info', label: 'Information' },
       { id: 'rooms', label: 'Rooms' },
       { id: 'activities', label: 'Activities' },
       { id: 'gallery', label: 'Gallery & Images' },
+      { id: 'famous', label: 'Famous Places' },
     ];
 
     const tabs = selectedPoint?.tabs || {};
@@ -711,7 +759,7 @@ const AdminCMS = () => {
           </div>
           <div className="form-group full">
             <label>Highlights / Bullets (one per line)</label>
-            <textarea rows={4} value={joinLines(tabs.infoBullets || [])} onChange={(e) => patchTabs('infoBullets', splitLines(e.target.value))} placeholder="Comfortable Rooms & Eco-Friendly&#10;Resort Located 8 Minutes from Airport&#10;Beautiful Mountain Views" />
+            <textarea rows={4} value={joinLines(normalizeBulletLines(tabs.infoBullets || []))} onChange={(e) => patchTabs('infoBullets', normalizeBulletLines(e.target.value))} placeholder="Comfortable Rooms & Eco-Friendly&#10;Resort Located 8 Minutes from Airport&#10;Beautiful Mountain Views" />
           </div>
           <div className="form-group full">
             <label>Information Images (3 recommended)</label>
@@ -883,6 +931,34 @@ const AdminCMS = () => {
       );
     };
 
+    /* ── Famous Places sub-tab ── */
+    const renderFamousPlacesTab = () => {
+      const places = tabs.famousPlaces || [];
+      return (
+        <div className="sub-tab-content">
+          {places.map((place, idx) => (
+            <div key={idx} className="nested-card">
+              <div className="nested-card-header">
+                <span className="item-num">Place #{idx + 1}</span>
+                <button className="btn-icon danger" onClick={() => removeFamousPlace(idx)} title="Remove">✕</button>
+              </div>
+              <div className="form-grid compact">
+                <div className="form-group full">
+                  <label>Title</label>
+                  <input value={place.title || ''} onChange={(e) => updateFamousPlace(idx, 'title', e.target.value)} placeholder="Place name..." />
+                </div>
+                <div className="form-group full">
+                  <label>Description</label>
+                  <textarea rows={3} value={place.description || ''} onChange={(e) => updateFamousPlace(idx, 'description', e.target.value)} placeholder="Describe this place..." />
+                </div>
+              </div>
+            </div>
+          ))}
+          <button className="btn outline" onClick={addFamousPlace}>+ Add Famous Place</button>
+        </div>
+      );
+    };
+
     /* ── Gallery sub-tab ── */
     const renderGalleryTab = () => (
       <div className="sub-tab-content">
@@ -929,6 +1005,48 @@ const AdminCMS = () => {
       </div>
     );
 
+    const renderDestinationInfoTab = () => {
+      const points = selectedDestination?.points || [];
+      if (points.length === 0) {
+        return (
+          <div className="sub-tab-content">
+            <p className="empty-msg">No tourist points yet. Add one in the Tourist Points tab first.</p>
+          </div>
+        );
+      }
+      return (
+        <div className="sub-tab-content">
+          {points.length > 1 && (
+            <div className="form-group full" style={{ marginBottom: 18 }}>
+              <label>Editing content for</label>
+              <select
+                value={selectedPoint?.id || ''}
+                onChange={(e) => { setSelectedPointId(e.target.value); setPointTab('info'); }}
+              >
+                {points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
+          {points.length === 1 && (
+            <p className="dest-info-editing-label">Editing: <strong>{selectedPoint?.name}</strong></p>
+          )}
+
+          <div className="inner-tabs">
+            {POINT_TABS.map((t) => (
+              <button key={t.id} className={`inner-tab${pointTab === t.id ? ' active' : ''}`} onClick={() => setPointTab(t.id)}>{t.label}</button>
+            ))}
+          </div>
+          <div className="inner-tab-body">
+            {pointTab === 'info' && renderInfoTab()}
+            {pointTab === 'rooms' && renderRoomsTab()}
+            {pointTab === 'activities' && renderActivitiesTab()}
+            {pointTab === 'gallery' && renderGalleryTab()}
+            {pointTab === 'famous' && renderFamousPlacesTab()}
+          </div>
+        </div>
+      );
+    };
+
     /* ── Points panel ── */
     const renderPointsPanel = () => {
       if (!selectedDestination) return <p className="empty-msg">Select a destination first.</p>;
@@ -942,66 +1060,55 @@ const AdminCMS = () => {
           </div>
 
           {points.length === 0 ? (
-            <p className="empty-msg">No tourist points added yet. Add one above or leave blank.</p>
+            <p className="empty-msg">No tourist points added yet.</p>
           ) : (
-            <>
-              <div className="point-selector">
-                <select value={selectedPoint?.id || ''} onChange={(e) => { setSelectedPointId(e.target.value); setPointTab('info'); }}>
-                  {points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              {selectedPoint && (
-                <div className="point-editor">
-                  {/* Point basic info */}
-                  <div className="form-grid compact" style={{ marginBottom: 16 }}>
-                    <div className="form-group">
-                      <label>Point Name</label>
-                      <input value={selectedPoint.name || ''} onChange={(e) => { const name = e.target.value; patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, name, slug: toSlug(name) })); }} />
-                    </div>
-                    <div className="form-group">
-                      <label>Slug</label>
-                      <input value={selectedPoint.slug || ''} onChange={(e) => patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, slug: toSlug(e.target.value) }))} />
-                    </div>
-                    <div className="form-group full">
-                      <label>Card Image Upload</label>
-                      <input type="file" accept="image/*" onChange={(e) => handlePointCardImageUpload(e.target.files?.[0])} />
-                      {!!selectedPoint.cardImage && (
-                        <button className="btn small outline" type="button" onClick={() => patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({ ...p, cardImage: '' }))}>
-                          Remove Current Image
-                        </button>
+            <div className="points-list">
+              {points.map((point) => (
+                <div key={point.id} className="point-card">
+                  <div className="point-card-header" style={{ cursor: 'default' }}>
+                    <div className="point-card-meta">
+                      {point.cardImage && (
+                        <img src={point.cardImage} alt={point.name} className="point-card-thumb" />
                       )}
-                    </div>
-                    {!!selectedPoint.cardImage && (
-                      <div className="image-preview-grid full">
-                        <div className="img-thumb large">
-                          <img src={selectedPoint.cardImage} alt="Point card" />
-                          {getBase64SizeMb(selectedPoint.cardImage) && <span>{getBase64SizeMb(selectedPoint.cardImage)}</span>}
+                      <div className="point-card-fields">
+                        <div className="form-group" style={{ marginBottom: 8 }}>
+                          <label>Point Name</label>
+                          <input
+                            value={point.name || ''}
+                            onChange={(e) => { const name = e.target.value; patchPoint(selectedDestination.id, point.id, (p) => ({ ...p, name, slug: toSlug(name) })); }}
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 8 }}>
+                          <label>Slug</label>
+                          <input
+                            value={point.slug || ''}
+                            onChange={(e) => patchPoint(selectedDestination.id, point.id, (p) => ({ ...p, slug: toSlug(e.target.value) }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Card Image Upload</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              setSelectedPointId(point.id);
+                              handlePointCardImageUpload(e.target.files?.[0]);
+                            }}
+                          />
+                          {!!point.cardImage && (
+                            <button className="btn small outline" style={{ marginTop: 6 }} type="button"
+                              onClick={() => patchPoint(selectedDestination.id, point.id, (p) => ({ ...p, cardImage: '' }))}>
+                              Remove Image
+                            </button>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-
-                  {/* 4 content tabs */}
-                  <div className="inner-tabs">
-                    {POINT_TABS.map((t) => (
-                      <button key={t.id} className={`inner-tab${pointTab === t.id ? ' active' : ''}`} onClick={() => setPointTab(t.id)}>{t.label}</button>
-                    ))}
-                  </div>
-
-                  <div className="inner-tab-body">
-                    {pointTab === 'info' && renderInfoTab()}
-                    {pointTab === 'rooms' && renderRoomsTab()}
-                    {pointTab === 'activities' && renderActivitiesTab()}
-                    {pointTab === 'gallery' && renderGalleryTab()}
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <button className="btn small danger" onClick={removePoint}>Delete This Point</button>
+                    </div>
+                    <button className="btn-icon danger" style={{ alignSelf: 'flex-start' }} onClick={() => { setSelectedPointId(point.id); removePoint(); }} title="Delete point">✕</button>
                   </div>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </div>
       );
@@ -1081,7 +1188,13 @@ const AdminCMS = () => {
               </div>
             )}
 
-            {destTab === 'points' && (
+            {destTab === 'destination-info' && (
+              <div className="inner-tab-body">
+                {renderDestinationInfoTab()}
+              </div>
+            )}
+
+            {destTab === 'tourist-points' && (
               <div className="inner-tab-body">
                 {renderPointsPanel()}
               </div>

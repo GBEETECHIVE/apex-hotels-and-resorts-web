@@ -1201,3 +1201,108 @@
     padding: 28px 20px;
   }
 }
+
+/* ─── TOURIST POINT ACCORDION CARDS ─────────────── */
+.points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.point-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.point-card.active {
+  border-color: var(--brand-mid);
+  box-shadow: var(--shadow-md);
+}
+
+.point-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface);
+  transition: background var(--transition);
+}
+
+.point-card-header:hover {
+  background: #e2effa;
+}
+
+.point-card.active .point-card-header {
+  background: linear-gradient(135deg, #c9e5f2 0%, #dceff8 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.point-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.point-card-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.point-card-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--brand-dark);
+}
+
+.point-card-toggle {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.point-card-body {
+  padding: 20px 18px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* flat card — fields inline */
+.point-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: var(--surface);
+}
+
+.point-card-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+}
+
+.point-card-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dest-info-editing-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: #edf6fc;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}

@@ -17,6 +17,11 @@ const asLineList = (value) => {
 
 const cleanLineList = (value) => asLineList(value).map((line) => String(line || '').trim()).filter(Boolean);
 
+const stripBulletPrefix = (value) =>
+  String(value || '').replace(/^\s*(?:[•·●▪◦\-*]|✔|✓|☑|✅)+\s*/, '').trim();
+
+const cleanBulletList = (value) => asLineList(value).map((line) => stripBulletPrefix(line)).filter(Boolean);
+
 const DynamicDestinationDetail = () => {
   const { destinationSlug, pointSlug } = useParams();
   const navigate = useNavigate();
@@ -82,7 +87,15 @@ const DynamicDestinationDetail = () => {
     : cleanLineList(destination?.heroSlides);
 
   const tabs = selectedPoint?.tabs || {};
-  const infoBullets = cleanLineList(tabs.infoBullets);
+  const destinationBullets = cleanBulletList(destination?.destinationInfoBullets || []);
+  const destinationInfoGallery = cleanLineList(destination?.destinationInfoGallery || []);
+  const destinationInfoTitle = destination?.destinationInfoTitle || destination?.name || '';
+  const destinationInfoDescription = destination?.destinationInfoDescription || '';
+  const famousPlaces = (tabs.famousPlaces || []).map((place) => ({
+    title: String(place?.title || '').trim(),
+    description: String(place?.description || '').trim(),
+  })).filter((place) => place.title || place.description);
+  const infoBullets = cleanBulletList(tabs.infoBullets);
   const infoGallery = cleanLineList(tabs.infoGallery);
 
   const roomCards = (tabs.rooms || []).map((room) => ({
@@ -115,6 +128,20 @@ const DynamicDestinationDetail = () => {
       </div>
 
       <TouristPointTabs
+        destinationContent={
+          <div className="tp-info-layout" style={{ display: 'block' }}>
+            <h1 className="tp-info-title">Famous Places</h1>
+            {famousPlaces.length === 0 && (
+              <p className="tp-info-desc">No famous places added yet.</p>
+            )}
+            {famousPlaces.map((place, idx) => (
+              <div key={`${selectedPoint.id}-famous-${idx}`} style={{ marginBottom: '22px' }}>
+                {place.title && <h3 className="tp-info-title" style={{ fontSize: '1.15rem', marginBottom: '6px' }}>{place.title}</h3>}
+                {place.description && <p className="tp-info-desc" style={{ marginBottom: 0 }}>{place.description}</p>}
+              </div>
+            ))}
+          </div>
+        }
         infoTitle={tabs.infoTitle || selectedPoint.name}
         infoDescription={
           <div className="tp-info-layout" style={{ display: 'flex', gap: '24px' }}>
@@ -123,7 +150,7 @@ const DynamicDestinationDetail = () => {
               <p className="tp-info-desc">{tabs.infoDescription || 'No description available.'}</p>
               <ul className="tp-info-bullets">
                 {infoBullets.map((item, idx) => (
-                  <li key={idx}>✔ {item}</li>
+                  <li key={idx}>{item}</li>
                 ))}
               </ul>
             </div>
@@ -159,9 +186,12 @@ const DynamicDestinationDetail = () => {
           </>
         }
         activitiesContent={
-          <div>
-            <ActivityGalleryCarousel slides={tabs.activities || []} />
-          </div>
+          <ActivityGalleryCarousel
+            slides={(tabs.activities || []).map((activity) => ({
+              ...activity,
+              images: cleanLineList(activity.images || []),
+            }))}
+          />
         }
         galleryTitle={tabs.galleryTitle || 'GALLERY & IMAGES'}
         galleryDescription={tabs.galleryDescription || 'Browse the best views and moments from our property and surroundings.'}
