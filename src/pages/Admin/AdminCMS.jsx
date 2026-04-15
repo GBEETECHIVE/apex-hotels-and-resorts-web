@@ -40,6 +40,36 @@ const cleanLines = (items) => {
   return source.map((line) => String(line || '').trim()).filter(Boolean);
 };
 
+const hasContentValue = (value) => {
+  if (Array.isArray(value)) return cleanLines(value).length > 0;
+  return String(value || '').trim().length > 0;
+};
+
+const getDestinationContentState = (destination) => {
+  const fallbackTabs = destination?.points?.[0]?.tabs || {};
+  const initialized = Boolean(destination?.destinationContentInitialized);
+
+  const resolveValue = (destinationValue, fallbackValue, emptyValue) => {
+    if (initialized) return destinationValue ?? emptyValue;
+    return hasContentValue(destinationValue) ? destinationValue : (fallbackValue ?? emptyValue);
+  };
+
+  return {
+    infoTitle: initialized
+      ? (destination?.destinationInfoTitle || destination?.name || '')
+      : (destination?.destinationInfoTitle || destination?.name || fallbackTabs.infoTitle || ''),
+    infoDescription: resolveValue(destination?.destinationInfoDescription, fallbackTabs.infoDescription, ''),
+    infoBullets: resolveValue(destination?.destinationInfoBullets, fallbackTabs.infoBullets, []),
+    infoGallery: resolveValue(destination?.destinationInfoGallery, fallbackTabs.infoGallery, []),
+    rooms: resolveValue(destination?.destinationRooms, fallbackTabs.rooms, []),
+    activities: resolveValue(destination?.destinationActivities, fallbackTabs.activities, []),
+    famousPlaces: resolveValue(destination?.destinationFamousPlaces, fallbackTabs.famousPlaces, []),
+    galleryTitle: resolveValue(destination?.destinationGalleryTitle, fallbackTabs.galleryTitle, ''),
+    galleryDescription: resolveValue(destination?.destinationGalleryDescription, fallbackTabs.galleryDescription, ''),
+    galleryImages: resolveValue(destination?.destinationGalleryImages, fallbackTabs.galleryImages, []),
+  };
+};
+
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
 
 const getBase64SizeMb = (dataUrl) => {
@@ -106,7 +136,7 @@ const AdminCMS = () => {
   const [bookings, setBookings] = useState([]);
   const [selectedDestinationId, setSelectedDestinationId] = useState('');
   const [selectedPointId, setSelectedPointId] = useState('');
-  const [destTab, setDestTab] = useState('basic');      // basic | points
+  const [destTab, setDestTab] = useState('basic');      // basic | destination-info | tourist-points
   const [pointTab, setPointTab] = useState('info');      // info | rooms | activities | gallery
   const [roomImageModal, setRoomImageModal] = useState(null); // {destId, ptId, roomIdx}
   const [status, setStatus] = useState('');
@@ -198,6 +228,11 @@ const AdminCMS = () => {
     return (selectedDestination.points || []).find((p) => p.id === selectedPointId) || (selectedDestination.points || [])[0] || null;
   }, [selectedDestination, selectedPointId]);
 
+  const destinationContent = useMemo(
+    () => getDestinationContentState(selectedDestination),
+    [selectedDestination]
+  );
+
   const stats = useMemo(() => {
     const pts = destinations.reduce((s, d) => s + ((d.points || []).length), 0);
     return { destinations: destinations.length, points: pts, bookings: bookings.length };
@@ -270,10 +305,17 @@ const AdminCMS = () => {
         slug: id,
         cardImage: '',
         heroSlides: [],
+        destinationContentInitialized: false,
         destinationInfoTitle: '',
         destinationInfoDescription: '',
         destinationInfoBullets: [],
         destinationInfoGallery: [],
+        destinationRooms: [],
+        destinationActivities: [],
+        destinationFamousPlaces: [],
+        destinationGalleryTitle: '',
+        destinationGalleryDescription: '',
+        destinationGalleryImages: [],
         points: [],
       }],
     }));
@@ -329,42 +371,21 @@ const AdminCMS = () => {
     setSelectedPointId(next?.id || '');
   };
 
-  /* ── point tab helpers ──────────────────────────── */
-  const patchTabs = (field, value) => {
-    if (!selectedDestination || !selectedPoint) return;
-    patchPoint(selectedDestination.id, selectedPoint.id, (p) => ({
-      ...p,
-      tabs: { ...(p.tabs || {}), [field]: value },
-    }));
-  };
-
-  const uploadTabImages = async (field, files) => {
-    if (!files?.length) return;
-    try {
-      const uploaded = await Promise.all(Array.from(files).map(uploadImage));
-      const current = cleanLines(selectedPoint?.tabs?.[field] || []);
-      patchTabs(field, [...current, ...uploaded]);
-    } catch (err) {
-      setError(err.message || 'Unable to upload images.');
-    }
-  };
-
-  const removeTabImageAt = (field, idx) => {
-    const current = cleanLines(selectedPoint?.tabs?.[field] || []);
-    patchTabs(field, current.filter((_, i) => i !== idx));
-  };
-
-  const patchDestinationField = (field, value) => {
+  const patchDestinationContentField = (field, value) => {
     if (!selectedDestination) return;
-    patchDestination(selectedDestination.id, (d) => ({ ...d, [field]: value }));
+    patchDestination(selectedDestination.id, (d) => ({
+      ...d,
+      destinationContentInitialized: true,
+      [field]: value,
+    }));
   };
 
   const uploadDestinationInfoImages = async (files) => {
     if (!selectedDestination || !files?.length) return;
     try {
       const uploaded = await Promise.all(Array.from(files).map(uploadImage));
-      const current = cleanLines(selectedDestination.destinationInfoGallery || []);
-      patchDestinationField('destinationInfoGallery', [...current, ...uploaded]);
+      const current = cleanLines(destinationContent.infoGallery || []);
+      patchDestinationContentField('destinationInfoGallery', [...current, ...uploaded]);
     } catch (err) {
       setError(err.message || 'Unable to upload destination information images.');
     }
@@ -372,15 +393,31 @@ const AdminCMS = () => {
 
   const removeDestinationInfoImageAt = (idx) => {
     if (!selectedDestination) return;
-    const current = cleanLines(selectedDestination.destinationInfoGallery || []);
-    patchDestinationField('destinationInfoGallery', current.filter((_, i) => i !== idx));
+    const current = cleanLines(destinationContent.infoGallery || []);
+    patchDestinationContentField('destinationInfoGallery', current.filter((_, i) => i !== idx));
+  };
+
+  const uploadDestinationTabImages = async (field, files) => {
+    if (!selectedDestination || !files?.length) return;
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(uploadImage));
+      const current = cleanLines(destinationContent[field] || []);
+      patchDestinationContentField(field, [...current, ...uploaded]);
+    } catch (err) {
+      setError(err.message || 'Unable to upload images.');
+    }
+  };
+
+  const removeDestinationTabImageAt = (field, idx) => {
+    const current = cleanLines(destinationContent[field] || []);
+    patchDestinationContentField(field, current.filter((_, i) => i !== idx));
   };
 
   const uploadRoomImages = async (roomIdx, files) => {
     if (!files?.length) return;
     try {
       const uploaded = await Promise.all(Array.from(files).map(uploadImage));
-      const rooms = selectedPoint?.tabs?.rooms || [];
+      const rooms = destinationContent.rooms || [];
       const current = cleanLines(Array.isArray(rooms[roomIdx]?.images) ? rooms[roomIdx].images : (rooms[roomIdx]?.image ? [rooms[roomIdx].image] : []));
       updateRoom(roomIdx, 'images', [...current, ...uploaded]);
     } catch (err) {
@@ -389,7 +426,7 @@ const AdminCMS = () => {
   };
 
   const removeRoomImageAt = (roomIdx, imgIdx) => {
-    const rooms = selectedPoint?.tabs?.rooms || [];
+    const rooms = destinationContent.rooms || [];
     const current = cleanLines(Array.isArray(rooms[roomIdx]?.images) ? rooms[roomIdx].images : (rooms[roomIdx]?.image ? [rooms[roomIdx].image] : []));
     updateRoom(roomIdx, 'images', current.filter((_, i) => i !== imgIdx));
   };
@@ -406,45 +443,45 @@ const AdminCMS = () => {
 
   // rooms
   const addRoom = () => {
-    const rooms = [...(selectedPoint?.tabs?.rooms || []), { images: [], title: '', price: '', quantity: '', amenities: [] }];
-    patchTabs('rooms', rooms);
+    const rooms = [...(destinationContent.rooms || []), { images: [], title: '', price: '', quantity: '', amenities: [] }];
+    patchDestinationContentField('destinationRooms', rooms);
   };
-  const removeRoom = (idx) => patchTabs('rooms', (selectedPoint?.tabs?.rooms || []).filter((_, i) => i !== idx));
+  const removeRoom = (idx) => patchDestinationContentField('destinationRooms', (destinationContent.rooms || []).filter((_, i) => i !== idx));
   const updateRoom = (idx, field, val) => {
-    patchTabs('rooms', (selectedPoint?.tabs?.rooms || []).map((r, i) => i === idx ? { ...r, [field]: val } : r));
+    patchDestinationContentField('destinationRooms', (destinationContent.rooms || []).map((r, i) => i === idx ? { ...r, [field]: val } : r));
   };
   const addRoomAmenity = (idx) => {
-    const rooms = (selectedPoint?.tabs?.rooms || []).map((r, i) => i === idx ? { ...r, amenities: [...(r.amenities || []), { icon: '', label: '' }] } : r);
-    patchTabs('rooms', rooms);
+    const rooms = (destinationContent.rooms || []).map((r, i) => i === idx ? { ...r, amenities: [...(r.amenities || []), { icon: '', label: '' }] } : r);
+    patchDestinationContentField('destinationRooms', rooms);
   };
   const updateRoomAmenity = (rIdx, aIdx, field, val) => {
-    const rooms = (selectedPoint?.tabs?.rooms || []).map((r, ri) => ri === rIdx ? {
+    const rooms = (destinationContent.rooms || []).map((r, ri) => ri === rIdx ? {
       ...r, amenities: (r.amenities || []).map((a, ai) => ai === aIdx ? { ...a, [field]: val } : a)
     } : r);
-    patchTabs('rooms', rooms);
+    patchDestinationContentField('destinationRooms', rooms);
   };
   const removeRoomAmenity = (rIdx, aIdx) => {
-    const rooms = (selectedPoint?.tabs?.rooms || []).map((r, ri) => ri === rIdx ? {
+    const rooms = (destinationContent.rooms || []).map((r, ri) => ri === rIdx ? {
       ...r, amenities: (r.amenities || []).filter((_, ai) => ai !== aIdx)
     } : r);
-    patchTabs('rooms', rooms);
+    patchDestinationContentField('destinationRooms', rooms);
   };
 
   // activities
   const addActivity = () => {
-    patchTabs('activities', [...(selectedPoint?.tabs?.activities || []), { title: '', description: '', images: ['', '', '', '', ''] }]);
+    patchDestinationContentField('destinationActivities', [...(destinationContent.activities || []), { title: '', description: '', images: ['', '', '', '', ''] }]);
   };
-  const removeActivity = (idx) => patchTabs('activities', (selectedPoint?.tabs?.activities || []).filter((_, i) => i !== idx));
+  const removeActivity = (idx) => patchDestinationContentField('destinationActivities', (destinationContent.activities || []).filter((_, i) => i !== idx));
   const updateActivity = (idx, field, val) => {
-    patchTabs('activities', (selectedPoint?.tabs?.activities || []).map((a, i) => i === idx ? { ...a, [field]: val } : a));
+    patchDestinationContentField('destinationActivities', (destinationContent.activities || []).map((a, i) => i === idx ? { ...a, [field]: val } : a));
   };
   // famous places
-  const addFamousPlace = () => patchTabs('famousPlaces', [...(selectedPoint?.tabs?.famousPlaces || []), { title: '', description: '' }]);
-  const removeFamousPlace = (idx) => patchTabs('famousPlaces', (selectedPoint?.tabs?.famousPlaces || []).filter((_, i) => i !== idx));
-  const updateFamousPlace = (idx, field, val) => patchTabs('famousPlaces', (selectedPoint?.tabs?.famousPlaces || []).map((p, i) => i === idx ? { ...p, [field]: val } : p));
+  const addFamousPlace = () => patchDestinationContentField('destinationFamousPlaces', [...(destinationContent.famousPlaces || []), { title: '', description: '' }]);
+  const removeFamousPlace = (idx) => patchDestinationContentField('destinationFamousPlaces', (destinationContent.famousPlaces || []).filter((_, i) => i !== idx));
+  const updateFamousPlace = (idx, field, val) => patchDestinationContentField('destinationFamousPlaces', (destinationContent.famousPlaces || []).map((p, i) => i === idx ? { ...p, [field]: val } : p));
 
   const updateActivityImage = (aIdx, imgIdx, val) => {
-    patchTabs('activities', (selectedPoint?.tabs?.activities || []).map((a, i) => {
+    patchDestinationContentField('destinationActivities', (destinationContent.activities || []).map((a, i) => {
       if (i !== aIdx) return a;
       const images = [...(a.images || ['', '', '', '', ''])];
       while (images.length < 5) images.push('');
@@ -747,19 +784,21 @@ const AdminCMS = () => {
       { id: 'famous', label: 'Famous Places' },
     ];
 
-    const tabs = selectedPoint?.tabs || {};
-
     /* ── Information sub-tab ── */
     const renderInfoTab = () => (
       <div className="sub-tab-content">
         <div className="form-grid">
           <div className="form-group full">
+            <label>Section Title</label>
+            <input value={destinationContent.infoTitle || ''} onChange={(e) => patchDestinationContentField('destinationInfoTitle', e.target.value)} placeholder="Discover this destination" />
+          </div>
+          <div className="form-group full">
             <label>Description</label>
-            <textarea rows={5} value={tabs.infoDescription || ''} onChange={(e) => patchTabs('infoDescription', e.target.value)} placeholder="Describe this tourist point..." />
+            <textarea rows={5} value={destinationContent.infoDescription || ''} onChange={(e) => patchDestinationContentField('destinationInfoDescription', e.target.value)} placeholder="Describe this destination..." />
           </div>
           <div className="form-group full">
             <label>Highlights / Bullets (one per line)</label>
-            <textarea rows={4} value={joinLines(normalizeBulletLines(tabs.infoBullets || []))} onChange={(e) => patchTabs('infoBullets', normalizeBulletLines(e.target.value))} placeholder="Comfortable Rooms & Eco-Friendly&#10;Resort Located 8 Minutes from Airport&#10;Beautiful Mountain Views" />
+            <textarea rows={4} value={joinLines(normalizeBulletLines(destinationContent.infoBullets || []))} onChange={(e) => patchDestinationContentField('destinationInfoBullets', normalizeBulletLines(e.target.value))} placeholder="Comfortable Rooms & Eco-Friendly&#10;Resort Located 8 Minutes from Airport&#10;Beautiful Mountain Views" />
           </div>
           <div className="form-group full">
             <label>Information Images (3 recommended)</label>
@@ -768,25 +807,25 @@ const AdminCMS = () => {
               accept="image/*"
               multiple
               onChange={async (e) => {
-                await uploadTabImages('infoGallery', e.target.files);
+                await uploadDestinationInfoImages(e.target.files);
                 e.target.value = '';
               }}
             />
           </div>
-          {(tabs.infoGallery || []).length > 0 && (
+          {(destinationContent.infoGallery || []).length > 0 && (
             <div className="image-preview-grid full">
-              {cleanLines(tabs.infoGallery).map((url, i) => (
+              {cleanLines(destinationContent.infoGallery).map((url, i) => (
                 <div key={i} className="img-thumb">
                   <img src={url} alt={`Info ${i + 1}`} />
                   <span>Image {i + 1}{getBase64SizeMb(url) ? ` · ${getBase64SizeMb(url)}` : ''}</span>
-                  <button className="btn-icon danger" type="button" onClick={() => removeTabImageAt('infoGallery', i)}>✕</button>
+                  <button className="btn-icon danger" type="button" onClick={() => removeDestinationInfoImageAt(i)}>✕</button>
                 </div>
               ))}
             </div>
           )}
-          {cleanLines(tabs.infoGallery).length > 0 && (
+          {cleanLines(destinationContent.infoGallery).length > 0 && (
             <div className="form-group full">
-              <button className="btn small outline" type="button" onClick={() => patchTabs('infoGallery', [])}>
+              <button className="btn small outline" type="button" onClick={() => patchDestinationContentField('destinationInfoGallery', [])}>
                 Remove All Information Images
               </button>
             </div>
@@ -797,7 +836,7 @@ const AdminCMS = () => {
 
     /* ── Rooms sub-tab ── */
     const renderRoomsTab = () => {
-      const rooms = tabs.rooms || [];
+      const rooms = destinationContent.rooms || [];
       return (
         <div className="sub-tab-content">
           {rooms.map((room, rIdx) => (
@@ -877,7 +916,7 @@ const AdminCMS = () => {
 
     /* ── Activities sub-tab ── */
     const renderActivitiesTab = () => {
-      const activities = tabs.activities || [];
+      const activities = destinationContent.activities || [];
       return (
         <div className="sub-tab-content">
           {activities.map((act, aIdx) => (
@@ -933,7 +972,7 @@ const AdminCMS = () => {
 
     /* ── Famous Places sub-tab ── */
     const renderFamousPlacesTab = () => {
-      const places = tabs.famousPlaces || [];
+      const places = destinationContent.famousPlaces || [];
       return (
         <div className="sub-tab-content">
           {places.map((place, idx) => (
@@ -965,11 +1004,11 @@ const AdminCMS = () => {
         <div className="form-grid">
           <div className="form-group full">
             <label>Gallery Title</label>
-            <input value={tabs.galleryTitle || ''} onChange={(e) => patchTabs('galleryTitle', e.target.value)} placeholder="GALLERY & IMAGES" />
+            <input value={destinationContent.galleryTitle || ''} onChange={(e) => patchDestinationContentField('destinationGalleryTitle', e.target.value)} placeholder="GALLERY & IMAGES" />
           </div>
           <div className="form-group full">
             <label>Gallery Description</label>
-            <textarea rows={3} value={tabs.galleryDescription || ''} onChange={(e) => patchTabs('galleryDescription', e.target.value)} placeholder="Explore our beautiful destination..." />
+            <textarea rows={3} value={destinationContent.galleryDescription || ''} onChange={(e) => patchDestinationContentField('destinationGalleryDescription', e.target.value)} placeholder="Explore our beautiful destination..." />
           </div>
           <div className="form-group full">
             <label>Gallery / Hero Images (used in destination hero)</label>
@@ -978,25 +1017,25 @@ const AdminCMS = () => {
               accept="image/*"
               multiple
               onChange={async (e) => {
-                await uploadTabImages('galleryImages', e.target.files);
+                await uploadDestinationTabImages('destinationGalleryImages', e.target.files);
                 e.target.value = '';
               }}
             />
           </div>
-          {(tabs.galleryImages || []).length > 0 && (
+          {(destinationContent.galleryImages || []).length > 0 && (
             <div className="image-preview-grid full">
-              {cleanLines(tabs.galleryImages).map((url, i) => (
+              {cleanLines(destinationContent.galleryImages).map((url, i) => (
                 <div key={i} className="img-thumb">
                   <img src={url} alt={`Gallery ${i + 1}`} />
                   <span>Gallery {i + 1}{getBase64SizeMb(url) ? ` · ${getBase64SizeMb(url)}` : ''}</span>
-                  <button className="btn-icon danger" type="button" onClick={() => removeTabImageAt('galleryImages', i)}>✕</button>
+                  <button className="btn-icon danger" type="button" onClick={() => removeDestinationTabImageAt('destinationGalleryImages', i)}>✕</button>
                 </div>
               ))}
             </div>
           )}
-          {cleanLines(tabs.galleryImages).length > 0 && (
+          {cleanLines(destinationContent.galleryImages).length > 0 && (
             <div className="form-group full">
-              <button className="btn small outline" type="button" onClick={() => patchTabs('galleryImages', [])}>
+              <button className="btn small outline" type="button" onClick={() => patchDestinationContentField('destinationGalleryImages', [])}>
                 Remove All Gallery Images
               </button>
             </div>
@@ -1005,32 +1044,71 @@ const AdminCMS = () => {
       </div>
     );
 
+    const createDestinationInfo = () => {
+      const fallbackTabs = selectedDestination?.points?.[0]?.tabs || {};
+      patchDestination(selectedDestination.id, (d) => ({
+        ...d,
+        destinationContentInitialized: true,
+        destinationInfoTitle: d.destinationInfoTitle || d.name || fallbackTabs.infoTitle || '',
+        destinationInfoDescription: hasContentValue(d.destinationInfoDescription) ? d.destinationInfoDescription : (fallbackTabs.infoDescription || ''),
+        destinationInfoBullets: hasContentValue(d.destinationInfoBullets) ? cleanLines(d.destinationInfoBullets || []) : cleanLines(fallbackTabs.infoBullets || []),
+        destinationInfoGallery: hasContentValue(d.destinationInfoGallery) ? cleanLines(d.destinationInfoGallery || []) : cleanLines(fallbackTabs.infoGallery || []),
+        destinationRooms: hasContentValue(d.destinationRooms) ? (d.destinationRooms || []) : (fallbackTabs.rooms || []),
+        destinationActivities: hasContentValue(d.destinationActivities) ? (d.destinationActivities || []) : (fallbackTabs.activities || []),
+        destinationFamousPlaces: hasContentValue(d.destinationFamousPlaces) ? (d.destinationFamousPlaces || []) : (fallbackTabs.famousPlaces || []),
+        destinationGalleryTitle: hasContentValue(d.destinationGalleryTitle) ? d.destinationGalleryTitle : (fallbackTabs.galleryTitle || ''),
+        destinationGalleryDescription: hasContentValue(d.destinationGalleryDescription) ? d.destinationGalleryDescription : (fallbackTabs.galleryDescription || ''),
+        destinationGalleryImages: hasContentValue(d.destinationGalleryImages) ? cleanLines(d.destinationGalleryImages || []) : cleanLines(fallbackTabs.galleryImages || []),
+      }));
+    };
+
     const renderDestinationInfoTab = () => {
-      const points = selectedDestination?.points || [];
-      if (points.length === 0) {
+      const hasDestinationInfo = Boolean(selectedDestination) && (
+        Boolean(selectedDestination.destinationContentInitialized) ||
+        hasContentValue(selectedDestination.destinationInfoTitle) ||
+        hasContentValue(selectedDestination.destinationInfoDescription) ||
+        hasContentValue(selectedDestination.destinationInfoBullets) ||
+        hasContentValue(selectedDestination.destinationInfoGallery) ||
+        hasContentValue(selectedDestination.destinationRooms) ||
+        hasContentValue(selectedDestination.destinationActivities) ||
+        hasContentValue(selectedDestination.destinationFamousPlaces) ||
+        hasContentValue(selectedDestination.destinationGalleryImages) ||
+        hasContentValue(selectedDestination.points?.[0]?.tabs?.infoDescription) ||
+        hasContentValue(selectedDestination.points?.[0]?.tabs?.rooms) ||
+        hasContentValue(selectedDestination.points?.[0]?.tabs?.activities)
+      );
+
+      if (!selectedDestination) {
         return (
           <div className="sub-tab-content">
-            <p className="empty-msg">No tourist points yet. Add one in the Tourist Points tab first.</p>
+            <p className="empty-msg">Select a destination first.</p>
           </div>
         );
       }
+
+      if (!hasDestinationInfo) {
+        return (
+          <div className="sub-tab-content">
+            <div className="dest-panel-head">
+              <div>
+                <h3>Destination Information</h3>
+                <p className="section-desc">Add the main overview content for this destination. Tourist points stay separate and are only used for the small cards.</p>
+              </div>
+              <button className="btn small primary" type="button" onClick={createDestinationInfo}>+ Add Info</button>
+            </div>
+            <p className="empty-msg">No destination info added yet.</p>
+          </div>
+        );
+      }
+
       return (
         <div className="sub-tab-content">
-          {points.length > 1 && (
-            <div className="form-group full" style={{ marginBottom: 18 }}>
-              <label>Editing content for</label>
-              <select
-                value={selectedPoint?.id || ''}
-                onChange={(e) => { setSelectedPointId(e.target.value); setPointTab('info'); }}
-              >
-                {points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+          <div className="dest-panel-head">
+            <div>
+              <h3>Destination Information</h3>
+              <p className="section-desc">This content controls the full destination detail tabs. Tourist points stay separate and only work as the small cards.</p>
             </div>
-          )}
-          {points.length === 1 && (
-            <p className="dest-info-editing-label">Editing: <strong>{selectedPoint?.name}</strong></p>
-          )}
-
+          </div>
           <div className="inner-tabs">
             {POINT_TABS.map((t) => (
               <button key={t.id} className={`inner-tab${pointTab === t.id ? ' active' : ''}`} onClick={() => setPointTab(t.id)}>{t.label}</button>

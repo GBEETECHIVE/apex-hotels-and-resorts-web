@@ -14,7 +14,7 @@ const Navbar = () => {
       <div className="nav-wrapper">
         <Link to="/" className="logo">
           <div className="logo-icon">🏨</div>
-          <span className="logo-text">ROOMY</span>
+          <span className="logo-text">APEX HOTEL AND RESORTS</span>
         </Link>
         
         <div className={`nav-links ${isMenuOpen ? 'active' : ''}`}>

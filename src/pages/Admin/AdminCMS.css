@@ -383,14 +383,13 @@
   color: #fff;
 }
 
-.stat-card.blue { background: linear-gradient(135deg, #1565c0, #1976d2); }
 .stat-card.blue { background: linear-gradient(135deg, #3f7fa5, #70a9c8); }
 .stat-card.green { background: linear-gradient(135deg, #4f8e71, #76b39a); }
-.stat-card.orange { background: linear-gradient(135deg, #b98d4f, #d4b37b); }
+.stat-card.orange { background: linear-gradient(135deg, #c97c1a, #e8a63e); color: #fff; }
 
 .stat-icon { font-size: 34px; }
 .stat-number { font-size: 30px; font-weight: 800; }
-.stat-label { font-size: 13px; opacity: .85; }
+.stat-label { font-size: 13px; opacity: .85; color:#fff }
 
 /* ─── QUICK ACTIONS ───────────────────────────────── */
 .quick-actions {

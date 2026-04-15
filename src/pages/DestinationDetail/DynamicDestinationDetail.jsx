@@ -22,6 +22,35 @@ const stripBulletPrefix = (value) =>
 
 const cleanBulletList = (value) => asLineList(value).map((line) => stripBulletPrefix(line)).filter(Boolean);
 
+const hasContentValue = (value) => {
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean).length > 0;
+  return String(value || '').trim().length > 0;
+};
+
+const getDestinationContentState = (destination, pointTabs = {}) => {
+  const initialized = Boolean(destination?.destinationContentInitialized);
+
+  const resolveValue = (destinationValue, fallbackValue, emptyValue) => {
+    if (initialized) return destinationValue ?? emptyValue;
+    return hasContentValue(destinationValue) ? destinationValue : (fallbackValue ?? emptyValue);
+  };
+
+  return {
+    infoTitle: initialized
+      ? (destination?.destinationInfoTitle || destination?.name || '')
+      : (destination?.destinationInfoTitle || destination?.name || pointTabs.infoTitle || ''),
+    infoDescription: resolveValue(destination?.destinationInfoDescription, pointTabs.infoDescription, ''),
+    infoBullets: resolveValue(destination?.destinationInfoBullets, pointTabs.infoBullets, []),
+    infoGallery: resolveValue(destination?.destinationInfoGallery, pointTabs.infoGallery, []),
+    rooms: resolveValue(destination?.destinationRooms, pointTabs.rooms, []),
+    activities: resolveValue(destination?.destinationActivities, pointTabs.activities, []),
+    famousPlaces: resolveValue(destination?.destinationFamousPlaces, pointTabs.famousPlaces, []),
+    galleryTitle: resolveValue(destination?.destinationGalleryTitle, pointTabs.galleryTitle, ''),
+    galleryDescription: resolveValue(destination?.destinationGalleryDescription, pointTabs.galleryDescription, ''),
+    galleryImages: resolveValue(destination?.destinationGalleryImages, pointTabs.galleryImages, []),
+  };
+};
+
 const DynamicDestinationDetail = () => {
   const { destinationSlug, pointSlug } = useParams();
   const navigate = useNavigate();
@@ -87,18 +116,20 @@ const DynamicDestinationDetail = () => {
     : cleanLineList(destination?.heroSlides);
 
   const tabs = selectedPoint?.tabs || {};
-  const destinationBullets = cleanBulletList(destination?.destinationInfoBullets || []);
-  const destinationInfoGallery = cleanLineList(destination?.destinationInfoGallery || []);
-  const destinationInfoTitle = destination?.destinationInfoTitle || destination?.name || '';
-  const destinationInfoDescription = destination?.destinationInfoDescription || '';
-  const famousPlaces = (tabs.famousPlaces || []).map((place) => ({
+  const destinationContent = getDestinationContentState(destination, tabs);
+  const infoBullets = cleanBulletList(tabs.infoBullets);
+  const infoGallery = cleanLineList(tabs.infoGallery);
+  const contentKeyBase = selectedPoint?.id || destination?.id || destinationSlug || 'destination';
+  const resolvedInfoTitle = destinationContent.infoTitle || tabs.infoTitle || destination?.name || '';
+  const resolvedInfoDescription = destinationContent.infoDescription || tabs.infoDescription || 'No description available.';
+  const resolvedInfoBullets = cleanBulletList(destinationContent.infoBullets).length > 0 ? cleanBulletList(destinationContent.infoBullets) : infoBullets;
+  const resolvedInfoGallery = cleanLineList(destinationContent.infoGallery).length > 0 ? cleanLineList(destinationContent.infoGallery) : infoGallery;
+  const resolvedFamousPlaces = (destinationContent.famousPlaces || []).map((place) => ({
     title: String(place?.title || '').trim(),
     description: String(place?.description || '').trim(),
   })).filter((place) => place.title || place.description);
-  const infoBullets = cleanBulletList(tabs.infoBullets);
-  const infoGallery = cleanLineList(tabs.infoGallery);
 
-  const roomCards = (tabs.rooms || []).map((room) => ({
+  const roomCards = (destinationContent.rooms || []).map((room) => ({
     ...room,
     images: Array.isArray(room.images) ? room.images : (room.image ? [room.image] : []),
     onBook: () => {
@@ -116,7 +147,7 @@ const DynamicDestinationDetail = () => {
     return <div className="destination-detail-container">{error}</div>;
   }
 
-  if (!destination || !selectedPoint) {
+  if (!destination) {
     return <div className="destination-detail-container">Destination not found.</div>;
   }
 
@@ -131,37 +162,37 @@ const DynamicDestinationDetail = () => {
         destinationContent={
           <div className="tp-info-layout" style={{ display: 'block' }}>
             <h1 className="tp-info-title">Famous Places</h1>
-            {famousPlaces.length === 0 && (
+            {resolvedFamousPlaces.length === 0 && (
               <p className="tp-info-desc">No famous places added yet.</p>
             )}
-            {famousPlaces.map((place, idx) => (
-              <div key={`${selectedPoint.id}-famous-${idx}`} style={{ marginBottom: '22px' }}>
+            {resolvedFamousPlaces.map((place, idx) => (
+              <div key={`${contentKeyBase}-famous-${idx}`} style={{ marginBottom: '22px' }}>
                 {place.title && <h3 className="tp-info-title" style={{ fontSize: '1.15rem', marginBottom: '6px' }}>{place.title}</h3>}
                 {place.description && <p className="tp-info-desc" style={{ marginBottom: 0 }}>{place.description}</p>}
               </div>
             ))}
           </div>
         }
-        infoTitle={tabs.infoTitle || selectedPoint.name}
+        infoTitle={resolvedInfoTitle}
         infoDescription={
           <div className="tp-info-layout" style={{ display: 'flex', gap: '24px' }}>
             <div className="tp-info-left">
-              <h1 className="tp-info-title">{tabs.infoTitle || selectedPoint.name}</h1>
-              <p className="tp-info-desc">{tabs.infoDescription || 'No description available.'}</p>
+              <h1 className="tp-info-title">{resolvedInfoTitle}</h1>
+              <p className="tp-info-desc">{resolvedInfoDescription}</p>
               <ul className="tp-info-bullets">
-                {infoBullets.map((item, idx) => (
+                {resolvedInfoBullets.map((item, idx) => (
                   <li key={idx}>{item}</li>
                 ))}
               </ul>
             </div>
-            {infoGallery.length > 0 && (
+            {resolvedInfoGallery.length > 0 && (
               <div className="tp-info-gallery">
                 <div className="tp-info-gallery-grid">
-                  {infoGallery.slice(0, 3).map((image, idx) => (
+                  {resolvedInfoGallery.slice(0, 3).map((image, idx) => (
                     <img
-                      key={`${selectedPoint.id}-info-${idx}`}
+                      key={`${contentKeyBase}-info-${idx}`}
                       src={image}
-                      alt={`${selectedPoint.name}-${idx + 1}`}
+                      alt={`${destination.name}-${idx + 1}`}
                       className={`tp-info-gallery-img ${idx === 0 ? 'double' : 'single'}`}
                     />
                   ))}
@@ -187,15 +218,15 @@ const DynamicDestinationDetail = () => {
         }
         activitiesContent={
           <ActivityGalleryCarousel
-            slides={(tabs.activities || []).map((activity) => ({
+            slides={(destinationContent.activities || []).map((activity) => ({
               ...activity,
               images: cleanLineList(activity.images || []),
             }))}
           />
         }
-        galleryTitle={tabs.galleryTitle || 'GALLERY & IMAGES'}
-        galleryDescription={tabs.galleryDescription || 'Browse the best views and moments from our property and surroundings.'}
-        galleryImages={tabs.galleryImages || []}
+        galleryTitle={destinationContent.galleryTitle || 'GALLERY & IMAGES'}
+        galleryDescription={destinationContent.galleryDescription || 'Browse the best views and moments from our property and surroundings.'}
+        galleryImages={destinationContent.galleryImages || []}
       />
 
       {/* Room Images Modal */}
