@@ -72,3 +72,11 @@ export const updateBookingStatus = async (bookingId, status, token) => {
     body: JSON.stringify({ status }),
   }, 'Failed to update booking status');
 };
+
+export const fetchRoomAvailability = async (resortName = '') => {
+  const params = new URLSearchParams();
+  if (resortName) params.set('resortName', resortName);
+  const query = params.toString();
+  const url = query ? `/api/bookings/availability?${query}` : '/api/bookings/availability';
+  return requestJson(url, undefined, 'Failed to fetch room availability');
+};

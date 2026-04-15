@@ -12,6 +12,7 @@ const ActivityGalleryCarousel = ({ slides }) => {
   const totalSlides = normalizedSlides.length;
   const slide = normalizedSlides[slideIndex] || null;
   const images = slide?.images || [];
+  const visibleImages = images.slice(0, 5);
   const totalImages = images.length;
 
   useEffect(() => {
@@ -47,7 +48,7 @@ const ActivityGalleryCarousel = ({ slides }) => {
     }
   };
 
-  const currentImage = multiSlide ? (images[0] || '') : (images[imgIndex] || '');
+  const currentImage = multiSlide ? '' : (images[imgIndex] || '');
   const showArrows = multiSlide ? totalSlides > 1 : totalImages > 1;
   const { title, description } = slide;
 
@@ -55,7 +56,34 @@ const ActivityGalleryCarousel = ({ slides }) => {
     <div className="activity-gallery-carousel">
       <div className="activity-gallery-columns">
         <div className="activity-gallery-image-panel">
-          {currentImage ? (
+          {multiSlide ? (
+            <>
+              {showArrows && (
+                <button className="activity-arrow activity-arrow-left" onClick={handlePrev} aria-label="Previous">
+                  &larr;
+                </button>
+              )}
+              {visibleImages.length ? (
+                <div className="activity-gallery-grid">
+                  {visibleImages.map((imageUrl, index) => (
+                    <img
+                      key={`${imageUrl}-${index}`}
+                      src={imageUrl}
+                      alt={`${title || 'Activity'} ${index + 1}`}
+                      className={`activity-gallery-grid-image ${index === 2 ? 'feature' : ''}`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="activity-gallery-empty">No images yet.</div>
+              )}
+              {showArrows && (
+                <button className="activity-arrow activity-arrow-right" onClick={handleNext} aria-label="Next">
+                  &rarr;
+                </button>
+              )}
+            </>
+          ) : currentImage ? (
             <>
               {showArrows && (
                 <button className="activity-arrow activity-arrow-left" onClick={handlePrev} aria-label="Previous">

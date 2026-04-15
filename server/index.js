@@ -69,6 +69,9 @@ const readJsonObject = (filePath, fallback = {}) => {
   }
 };
 
+const normalizeBookingValue = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const getBookingRoomKey = (roomName, resortName) => `${normalizeBookingValue(roomName)}::${normalizeBookingValue(resortName)}`;
+
 const authorizeAdmin = (req, res, next) => {
   const legacyKey = req.headers['x-admin-key'];
   const authHeader = req.headers.authorization || '';
@@ -447,6 +450,29 @@ app.patch('/api/admin/bookings/:id/status', authorizeAdmin, (req, res) => {
     });
 });
 
+app.get('/api/bookings/availability', async (req, res) => {
+  const resortQuery = normalizeBookingValue(req.query?.resortName || '');
+
+  try {
+    const confirmed = await Booking.find({ status: 'confirmed' }).lean();
+    const unavailableRooms = confirmed
+      .filter((item) => {
+        if (!resortQuery) return true;
+        return normalizeBookingValue(item.resortName) === resortQuery;
+      })
+      .map((item) => ({
+        roomName: item.roomName,
+        resortName: item.resortName,
+        key: getBookingRoomKey(item.roomName, item.resortName),
+      }));
+
+    return res.json({ unavailableRooms });
+  } catch (error) {
+    console.error('Failed to fetch booking availability:', error);
+    return res.status(500).json({ error: 'Failed to fetch booking availability.' });
+  }
+});
+
 app.post('/api/bookings', async (req, res) => {
   const { fullName, email, mobile, dateFrom, dateTo, persons, roomName, resortName } = req.body || {};
 
@@ -469,6 +495,18 @@ app.post('/api/bookings', async (req, res) => {
   };
 
   try {
+    const roomKey = getBookingRoomKey(roomName, resortName);
+    const confirmedRooms = await Booking.find({ status: 'confirmed' }).lean();
+    const conflictingBooking = confirmedRooms.find(
+      (row) => getBookingRoomKey(row.roomName, row.resortName) === roomKey
+    );
+
+    if (conflictingBooking) {
+      return res.status(409).json({
+        error: 'This room is already confirmed and not available right now.',
+      });
+    }
+
     await transporter.sendMail({
       from: `APEX Hotels and Resorts <${process.env.FROM_EMAIL}>`,
       to: process.env.ADMIN_EMAIL,

@@ -1,187 +1,162 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PropertyCard from '../../components/PropertyCard/PropertyCard';
+import { fetchCms } from '../../services/cmsApi';
 import './Listings.css';
 import BannerSection from '../../components/BannerSection/BannerSection';
+
+const toSlug = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '-');
+
+const parsePrice = (value) => {
+  const numeric = Number(String(value || '').replace(/[^\d.]/g, ''));
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const formatPrice = (value) => {
+  const parsed = parsePrice(value);
+  return parsed ? parsed.toLocaleString('en-PK') : 'Contact';
+};
 
 const Listings = () => {
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState({
-    city: searchParams.get('city') || '',
-    type: searchParams.get('type') || '',
+    destination: searchParams.get('destination') || searchParams.get('city') || '',
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
-    beds: '',
+    facility: '',
     sortBy: 'newest'
   });
-
-  // Sample property data (in a real app, this would come from an API)
-  const allProperties = [
-    {
-      id: 1,
-      title: 'Spacious Room in DHA Phase 5',
-      location: 'DHA Phase 5, Karachi',
-      price: '25,000',
-      type: 'Room',
-      beds: 1,
-      baths: 1,
-      area: '150 sq ft',
-      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500',
-      city: 'karachi'
-    },
-    {
-      id: 2,
-      title: 'Luxury Apartment in Bahria Town',
-      location: 'Bahria Town, Lahore',
-      price: '45,000',
-      type: 'Apartment',
-      beds: 2,
-      baths: 2,
-      area: '1000 sq ft',
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500',
-      city: 'lahore'
-    },
-    {
-      id: 3,
-      title: 'Cozy Room Near University',
-      location: 'Gulberg, Lahore',
-      price: '18,000',
-      type: 'Room',
-      beds: 1,
-      baths: 1,
-      area: '120 sq ft',
-      image: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=500',
-      city: 'lahore'
-    },
-    {
-      id: 4,
-      title: 'Modern Flat in F-11',
-      location: 'F-11, Islamabad',
-      price: '35,000',
-      type: 'Apartment',
-      beds: 1,
-      baths: 1,
-      area: '650 sq ft',
-      image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=500',
-      city: 'islamabad'
-    },
-    {
-      id: 5,
-      title: 'Student Room in Saddar',
-      location: 'Saddar, Karachi',
-      price: '15,000',
-      type: 'Room',
-      beds: 1,
-      baths: 1,
-      area: '100 sq ft',
-      image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=500',
-      city: 'karachi'
-    },
-    {
-      id: 6,
-      title: 'Premium Room in Model Town',
-      location: 'Model Town, Lahore',
-      price: '30,000',
-      type: 'Room',
-      beds: 1,
-      baths: 1,
-      area: '200 sq ft',
-      image: 'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=500',
-      city: 'lahore'
-    },
-    {
-      id: 7,
-      title: 'Beautiful House in Gulshan',
-      location: 'Gulshan-e-Iqbal, Karachi',
-      price: '55,000',
-      type: 'House',
-      beds: 3,
-      baths: 2,
-      area: '1500 sq ft',
-      image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=500',
-      city: 'karachi'
-    },
-    {
-      id: 8,
-      title: 'Studio Apartment in Blue Area',
-      location: 'Blue Area, Islamabad',
-      price: '28,000',
-      type: 'Studio',
-      beds: 1,
-      baths: 1,
-      area: '400 sq ft',
-      image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=500',
-      city: 'islamabad'
-    },
-    {
-      id: 9,
-      title: 'Affordable Room in Saddar',
-      location: 'Saddar, Rawalpindi',
-      price: '12,000',
-      type: 'Room',
-      beds: 1,
-      baths: 1,
-      area: '90 sq ft',
-      image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=500',
-      city: 'rawalpindi'
-    },
-    {
-      id: 10,
-      title: 'Luxurious Apartment in DHA',
-      location: 'DHA Phase 6, Karachi',
-      price: '65,000',
-      type: 'Apartment',
-      beds: 3,
-      baths: 3,
-      area: '1800 sq ft',
-      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=500',
-      city: 'karachi'
-    },
-    {
-      id: 11,
-      title: 'Comfortable Room in Johar Town',
-      location: 'Johar Town, Lahore',
-      price: '22,000',
-      type: 'Room',
-      beds: 1,
-      baths: 1,
-      area: '140 sq ft',
-      image: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=500',
-      city: 'lahore'
-    },
-    {
-      id: 12,
-      title: 'Modern House in F-10',
-      location: 'F-10, Islamabad',
-      price: '80,000',
-      type: 'House',
-      beds: 4,
-      baths: 3,
-      area: '2500 sq ft',
-      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=500',
-      city: 'islamabad'
-    }
-  ];
-
-  const [filteredProperties, setFilteredProperties] = useState(allProperties);
+  const [cmsDestinations, setCmsDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadListings = async () => {
+      try {
+        setLoading(true);
+        setLoadError('');
+        const cms = await fetchCms();
+        if (!isMounted) return;
+        setCmsDestinations(Array.isArray(cms?.destinations) ? cms.destinations : []);
+      } catch (error) {
+        if (!isMounted) return;
+        setLoadError(error?.message || 'Failed to load listings.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadListings();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const resolveRooms = (destination) => {
+    if (Array.isArray(destination?.destinationRooms) && destination.destinationRooms.length > 0) {
+      return destination.destinationRooms;
+    }
+
+    const fallbackTabs = destination?.points?.[0]?.tabs;
+    if (Array.isArray(fallbackTabs?.rooms) && fallbackTabs.rooms.length > 0) {
+      return fallbackTabs.rooms;
+    }
+
+    return [];
+  };
+
+  const allProperties = useMemo(() => {
+    return cmsDestinations.flatMap((destination) => {
+      const destinationName = destination?.name || 'Unknown Destination';
+      const destinationSlug = destination?.slug || toSlug(destinationName);
+      const rooms = resolveRooms(destination);
+
+      return rooms.map((room, index) => {
+        const amenities = Array.isArray(room?.amenities)
+          ? room.amenities.map((a) => String(a?.label || '').trim()).filter(Boolean)
+          : [];
+        const roomImages = Array.isArray(room?.images) ? room.images.filter(Boolean) : [];
+        const image = roomImages[0] || destination?.cardImage || destination?.heroSlides?.[0] || '';
+        const quantity = Number.parseInt(room?.quantity, 10);
+
+        return {
+          id: `${destinationSlug}-${index}`,
+          title: room?.title || `${destinationName} Hotel Room`,
+          location: destinationName,
+          price: formatPrice(room?.price),
+          priceValue: parsePrice(room?.price),
+          type: 'Hotel',
+          beds: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+          baths: 1,
+          area: amenities.slice(0, 2).join(' • ') || 'Hotel Room',
+          image,
+          destination: destinationSlug,
+          facilities: amenities,
+        };
+      });
+    });
+  }, [cmsDestinations]);
+
+  const destinationOptions = useMemo(() => {
+    const map = new Map();
+    allProperties.forEach((property) => {
+      if (!property.destination) return;
+      if (!map.has(property.destination)) {
+        map.set(property.destination, property.location);
+      }
+    });
+
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allProperties]);
+
+  const facilityOptions = useMemo(() => {
+    const set = new Set();
+    allProperties.forEach((property) => {
+      (property.facilities || []).forEach((facility) => {
+        if (facility) set.add(facility);
+      });
+    });
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [allProperties]);
+
+  const filteredProperties = useMemo(() => {
+    const minPrice = Number(filters.minPrice || 0);
+    const maxPrice = Number(filters.maxPrice || 0);
+
     let results = [...allProperties];
 
-    if (filters.city) {
-      results = results.filter(p => p.city === filters.city);
+    if (filters.destination) {
+      results = results.filter((property) => property.destination === filters.destination);
     }
 
-    if (filters.type) {
-      results = results.filter(p => p.type.toLowerCase() === filters.type.toLowerCase());
+    if (filters.facility) {
+      const selectedFacility = filters.facility.toLowerCase();
+      results = results.filter((property) =>
+        (property.facilities || []).some((facility) => facility.toLowerCase() === selectedFacility)
+      );
     }
 
-    if (filters.beds) {
-      results = results.filter(p => p.beds >= parseInt(filters.beds));
+    if (minPrice > 0) {
+      results = results.filter((property) => property.priceValue !== null && property.priceValue >= minPrice);
     }
 
-    setFilteredProperties(results);
-  }, [filters]);
+    if (maxPrice > 0) {
+      results = results.filter((property) => property.priceValue !== null && property.priceValue <= maxPrice);
+    }
+
+    if (filters.sortBy === 'price-low') {
+      results.sort((a, b) => (a.priceValue ?? Number.MAX_SAFE_INTEGER) - (b.priceValue ?? Number.MAX_SAFE_INTEGER));
+    } else if (filters.sortBy === 'price-high') {
+      results.sort((a, b) => (b.priceValue ?? 0) - (a.priceValue ?? 0));
+    }
+
+    return results;
+  }, [allProperties, filters]);
 
   const handleFilterChange = (e) => {
     setFilters({
@@ -192,18 +167,17 @@ const Listings = () => {
 
   const clearFilters = () => {
     setFilters({
-      city: '',
-      type: '',
+      destination: '',
       minPrice: '',
       maxPrice: '',
-      beds: '',
+      facility: '',
       sortBy: 'newest'
     });
   };
 
   return (
     <div className="listings-page">
-      <BannerSection title="Find Your Perfect Property" subtitle={`${filteredProperties.length} properties available`} />
+      <BannerSection title="Find Your Perfect Hotel" subtitle={`${filteredProperties.length} hotels available`} />
 
       <div className="container">
         <div className="listings-layout">
@@ -215,36 +189,22 @@ const Listings = () => {
             </div>
 
             <div className="filter-group">
-              <label>City</label>
-              <select name="city" value={filters.city} onChange={handleFilterChange}>
-                <option value="">All Cities</option>
-                <option value="karachi">Karachi</option>
-                <option value="lahore">Lahore</option>
-                <option value="islamabad">Islamabad</option>
-                <option value="rawalpindi">Rawalpindi</option>
-                <option value="faisalabad">Faisalabad</option>
+              <label>Destination Name</label>
+              <select name="destination" value={filters.destination} onChange={handleFilterChange}>
+                <option value="">All Destinations</option>
+                {destinationOptions.map((destination) => (
+                  <option key={destination.value} value={destination.value}>{destination.label}</option>
+                ))}
               </select>
             </div>
 
             <div className="filter-group">
-              <label>Property Type</label>
-              <select name="type" value={filters.type} onChange={handleFilterChange}>
-                <option value="">All Types</option>
-                <option value="room">Room</option>
-                <option value="apartment">Apartment</option>
-                <option value="house">House</option>
-                <option value="studio">Studio</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Bedrooms</label>
-              <select name="beds" value={filters.beds} onChange={handleFilterChange}>
-                <option value="">Any</option>
-                <option value="1">1+</option>
-                <option value="2">2+</option>
-                <option value="3">3+</option>
-                <option value="4">4+</option>
+              <label>Facility</label>
+              <select name="facility" value={filters.facility} onChange={handleFilterChange}>
+                <option value="">All Facilities</option>
+                {facilityOptions.map((facility) => (
+                  <option key={facility} value={facility}>{facility}</option>
+                ))}
               </select>
             </div>
 
@@ -281,7 +241,16 @@ const Listings = () => {
 
           {/* Properties Grid */}
           <div className="listings-content">
-            {filteredProperties.length > 0 ? (
+            {loading ? (
+              <div className="no-results">
+                <h3>Loading hotels...</h3>
+              </div>
+            ) : loadError ? (
+              <div className="no-results">
+                <h3>Unable to load hotels</h3>
+                <p>{loadError}</p>
+              </div>
+            ) : filteredProperties.length > 0 ? (
               <div className="properties-grid">
                 {filteredProperties.map(property => (
                   <PropertyCard key={property.id} property={property} />
@@ -289,8 +258,8 @@ const Listings = () => {
               </div>
             ) : (
               <div className="no-results">
-                <h3>No properties found</h3>
-                <p>Try adjusting your filters to see more results</p>
+                <h3>No hotels found</h3>
+                <p>Try adjusting destination, facility, or price range filters.</p>
               </div>
             )}
           </div>

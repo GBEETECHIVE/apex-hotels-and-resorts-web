@@ -6,7 +6,7 @@ import TouristPointTabs from '../../components/TouristPointTabs/TouristPointTabs
 import RoomList from '../../components/RoomCard/RoomList';
 import ActivityGalleryCarousel from '../../components/ActivityGalleryCarousel/ActivityGalleryCarousel';
 import BookingFormModal from '../../components/BookingFormModal/BookingFormModal';
-import { fetchCms } from '../../services/cmsApi';
+import { fetchCms, fetchRoomAvailability } from '../../services/cmsApi';
 import './DestinationDetail.css';
 
 const asLineList = (value) => {
@@ -21,6 +21,8 @@ const stripBulletPrefix = (value) =>
   String(value || '').replace(/^\s*(?:[•·●▪◦\-*]|✔|✓|☑|✅)+\s*/, '').trim();
 
 const cleanBulletList = (value) => asLineList(value).map((line) => stripBulletPrefix(line)).filter(Boolean);
+const normalizeBookingValue = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const getBookingRoomKey = (roomName, resortName) => `${normalizeBookingValue(roomName)}::${normalizeBookingValue(resortName)}`;
 
 const hasContentValue = (value) => {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean).length > 0;
@@ -64,6 +66,7 @@ const DynamicDestinationDetail = () => {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingRoom, setBookingRoom] = useState(null);
   const [roomImagesModal, setRoomImagesModal] = useState(null);
+  const [unavailableRoomKeys, setUnavailableRoomKeys] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -111,6 +114,25 @@ const DynamicDestinationDetail = () => {
     }
   }, [loading, destination, pointSlug, selectedPoint, navigate]);
 
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!destination?.name) {
+        setUnavailableRoomKeys([]);
+        return;
+      }
+
+      try {
+        const payload = await fetchRoomAvailability(destination.name);
+        const keys = (payload?.unavailableRooms || []).map((item) => item.key).filter(Boolean);
+        setUnavailableRoomKeys(keys);
+      } catch (_error) {
+        setUnavailableRoomKeys([]);
+      }
+    };
+
+    loadAvailability();
+  }, [destination?.name]);
+
   const heroSlides = selectedPoint?.heroSlides?.length
     ? cleanLineList(selectedPoint.heroSlides)
     : cleanLineList(destination?.heroSlides);
@@ -129,15 +151,21 @@ const DynamicDestinationDetail = () => {
     description: String(place?.description || '').trim(),
   })).filter((place) => place.title || place.description);
 
-  const roomCards = (destinationContent.rooms || []).map((room) => ({
-    ...room,
-    images: Array.isArray(room.images) ? room.images : (room.image ? [room.image] : []),
-    onBook: () => {
-      setBookingRoom(room);
-      setShowBookingForm(true);
-    },
-    onGallery: (imgs) => setRoomImagesModal(imgs),
-  }));
+  const roomCards = (destinationContent.rooms || []).map((room) => {
+    const isAvailable = !unavailableRoomKeys.includes(getBookingRoomKey(room?.title, destination?.name));
+
+    return {
+      ...room,
+      images: Array.isArray(room.images) ? room.images : (room.image ? [room.image] : []),
+      isAvailable,
+      onBook: () => {
+        if (!isAvailable) return;
+        setBookingRoom(room);
+        setShowBookingForm(true);
+      },
+      onGallery: (imgs) => setRoomImagesModal(imgs),
+    };
+  });
 
   if (loading) {
     return <div className="destination-detail-container">Loading destination content...</div>;

@@ -1,61 +1,164 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { fetchCms } from '../../services/cmsApi';
+import BannerSection from '../../components/BannerSection/BannerSection';
 import './PropertyDetail.css';
 
+const toSlug = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '-');
+
+const parsePrice = (value) => {
+  const numeric = Number(String(value || '').replace(/[^\d.]/g, ''));
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const formatPrice = (value) => {
+  const parsed = parsePrice(value);
+  return parsed ? parsed.toLocaleString('en-PK') : 'Contact';
+};
+
+const resolveRooms = (destination) => {
+  if (Array.isArray(destination?.destinationRooms) && destination.destinationRooms.length > 0) {
+    return destination.destinationRooms;
+  }
+
+  const fallbackTabs = destination?.points?.[0]?.tabs;
+  if (Array.isArray(fallbackTabs?.rooms) && fallbackTabs.rooms.length > 0) {
+    return fallbackTabs.rooms;
+  }
+
+  return [];
+};
+
+const getRoomImages = (room) => {
+  const imageList = Array.isArray(room?.images) ? room.images : (room?.image ? [room.image] : []);
+  return imageList
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+};
+
 const PropertyDetail = () => {
+  const { id } = useParams();
   const [activeImage, setActiveImage] = useState(0);
+  const [cmsDestinations, setCmsDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  // Sample property data (in a real app, this would come from an API)
-  const property = {
-    id: 1,
-    title: 'Spacious Room in DHA Phase 5',
-    location: 'DHA Phase 5, Karachi',
-    price: '25,000',
-    type: 'Room',
-    beds: 1,
-    baths: 1,
-    area: '150 sq ft',
-    city: 'Karachi',
-    images: [
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
-      'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800',
-      'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800',
-      'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=800'
-    ],
-    description: 'Beautiful and spacious room available for rent in the heart of DHA Phase 5. Perfect for students and young professionals. The room comes with all modern amenities and is located in a safe and secure neighborhood.',
-    features: [
-      'Fully Furnished',
-      'Attached Bathroom',
-      'AC & Heater',
-      'High-Speed Internet',
-      'Power Backup',
-      'Parking Available',
-      'Security 24/7',
-      'Near Public Transport'
-    ],
-    amenities: [
-      'Kitchen Access',
-      'Laundry Service',
-      'Common Area',
-      'Gym',
-      'Elevator'
-    ],
-    owner: {
-      name: 'Ahmed Khan',
-      phone: '+92 300 1234567',
-      email: 'ahmed@example.com',
-      memberSince: 'January 2024'
-    },
-    postedDate: '2 days ago',
-    views: 245
-  };
+  useEffect(() => {
+    let isMounted = true;
 
-  const handleContact = () => {
-    alert('Contact feature would open messaging or call functionality');
-  };
+    const loadCms = async () => {
+      try {
+        setLoading(true);
+        setLoadError('');
+        const cms = await fetchCms();
+        if (!isMounted) return;
+        setCmsDestinations(Array.isArray(cms?.destinations) ? cms.destinations : []);
+      } catch (error) {
+        if (!isMounted) return;
+        setLoadError(error?.message || 'Failed to load property details.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadCms();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const property = useMemo(() => {
+    if (!id) return null;
+
+    const idMatch = String(id).match(/-(\d+)$/);
+    if (!idMatch) return null;
+
+    const roomIndex = Number.parseInt(idMatch[1], 10);
+    const destinationSlug = String(id).replace(/-\d+$/, '');
+    if (!Number.isInteger(roomIndex) || roomIndex < 0 || !destinationSlug) return null;
+
+    const destination = cmsDestinations.find((item) => {
+      const slug = item?.slug || toSlug(item?.name);
+      return slug === destinationSlug;
+    });
+
+    if (!destination) return null;
+
+    const rooms = resolveRooms(destination);
+    const room = rooms[roomIndex];
+    if (!room) return null;
+
+    const amenities = Array.isArray(room?.amenities)
+      ? room.amenities.map((a) => String(a?.label || '').trim()).filter(Boolean)
+      : [];
+    const roomImages = getRoomImages(room);
+    const fallbackImage = destination?.cardImage || destination?.heroSlides?.[0] || '';
+    const quantity = Number.parseInt(room?.quantity, 10);
+
+    return {
+      id,
+      title: room?.title || `${destination?.name || 'Hotel'} Room`,
+      location: destination?.name || 'Unknown Destination',
+      price: formatPrice(room?.price),
+      type: 'Hotel',
+      beds: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      baths: 1,
+      area: amenities.slice(0, 2).join(' • ') || 'Hotel Room',
+      images: roomImages.length > 0 ? roomImages : [fallbackImage].filter(Boolean),
+      description:
+        room?.description ||
+        destination?.metaDescription ||
+        destination?.shortDescription ||
+        'Enjoy a comfortable stay with scenic surroundings and quality hospitality.',
+      features: amenities,
+    };
+  }, [cmsDestinations, id]);
+
+  useEffect(() => {
+    setActiveImage(0);
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="property-detail-page">
+        <BannerSection title="Hotel Room Details" subtitle="Loading data from CMS" />
+        <div className="container property-detail-feedback">
+          <h2>Loading property details...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="property-detail-page">
+        <BannerSection title="Hotel Room Details" subtitle="Unable to fetch CMS data" />
+        <div className="container property-detail-feedback">
+          <h2>Unable to load property</h2>
+          <p>{loadError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="property-detail-page">
+        <BannerSection title="Hotel Room Details" subtitle="Property was not found" />
+        <div className="container property-detail-feedback">
+          <h2>Property not found</h2>
+          <p>The requested room is not available in CMS data.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedImage = property.images[activeImage] || property.images[0] || '';
 
   return (
     <div className="property-detail-page">
+      <BannerSection title={property.title} subtitle={property.location} />
+
       <div className="container">
         {/* Breadcrumb */}
         <div className="breadcrumb">
@@ -69,71 +172,65 @@ const PropertyDetail = () => {
         {/* Image Gallery */}
         <div className="image-gallery">
           <div className="main-image">
-            <img src={property.images[activeImage]} alt={property.title} />
+            <img src={selectedImage} alt={property.title} />
           </div>
-          <div className="thumbnail-images">
-            {property.images.map((image, index) => (
-              <div
-                key={index}
-                className={`thumbnail ${activeImage === index ? 'active' : ''}`}
-                onClick={() => setActiveImage(index)}
-              >
-                <img src={image} alt={`View ${index + 1}`} />
-              </div>
-            ))}
-          </div>
+          {property.images.length > 1 && (
+            <div className="thumbnail-images">
+              {property.images.map((image, index) => (
+                <div
+                  key={index}
+                  className={`thumbnail ${activeImage === index ? 'active' : ''}`}
+                  onClick={() => setActiveImage(index)}
+                >
+                  <img src={image} alt={`View ${index + 1}`} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="detail-layout">
-          {/* Main Content */}
-          <div className="detail-content">
-            <div className="property-header">
+        <div className="detail-content detail-content--full">
+          <div className="property-header">
+            <div>
+              <span className="property-type-badge">{property.type}</span>
+              <h1>{property.title}</h1>
+              <p className="location">📍 {property.location}</p>
+            </div>
+            <div className="price-section">
+              <div className="price">PKR {property.price}<span>/month</span></div>
+            </div>
+          </div>
+
+          <div className="property-stats">
+            <div className="stat">
+              <span className="stat-icon">🛏️</span>
               <div>
-                <span className="property-type-badge">{property.type}</span>
-                <h1>{property.title}</h1>
-                <p className="location">📍 {property.location}</p>
-              </div>
-              <div className="price-section">
-                <div className="price">PKR {property.price}<span>/month</span></div>
+                <div className="stat-value">{property.beds}</div>
+                <div className="stat-label">Bedroom</div>
               </div>
             </div>
-
-            <div className="property-stats">
-              <div className="stat">
-                <span className="stat-icon">🛏️</span>
-                <div>
-                  <div className="stat-value">{property.beds}</div>
-                  <div className="stat-label">Bedroom</div>
-                </div>
-              </div>
-              <div className="stat">
-                <span className="stat-icon">🚿</span>
-                <div>
-                  <div className="stat-value">{property.baths}</div>
-                  <div className="stat-label">Bathroom</div>
-                </div>
-              </div>
-              <div className="stat">
-                <span className="stat-icon">📐</span>
-                <div>
-                  <div className="stat-value">{property.area}</div>
-                  <div className="stat-label">Area</div>
-                </div>
-              </div>
-              <div className="stat">
-                <span className="stat-icon">👁️</span>
-                <div>
-                  <div className="stat-value">{property.views}</div>
-                  <div className="stat-label">Views</div>
-                </div>
+            <div className="stat">
+              <span className="stat-icon">🚿</span>
+              <div>
+                <div className="stat-value">{property.baths}</div>
+                <div className="stat-label">Bathroom</div>
               </div>
             </div>
-
-            <div className="detail-section">
-              <h2>Description</h2>
-              <p>{property.description}</p>
+            <div className="stat">
+              <span className="stat-icon">📐</span>
+              <div>
+                <div className="stat-value">{property.area}</div>
+                <div className="stat-label">Highlights</div>
+              </div>
             </div>
+          </div>
 
+          <div className="detail-section">
+            <h2>Description</h2>
+            <p>{property.description}</p>
+          </div>
+
+          {property.features.length > 0 && (
             <div className="detail-section">
               <h2>Features</h2>
               <div className="features-list">
@@ -145,66 +242,7 @@ const PropertyDetail = () => {
                 ))}
               </div>
             </div>
-
-            <div className="detail-section">
-              <h2>Amenities</h2>
-              <div className="amenities-list">
-                {property.amenities.map((amenity, index) => (
-                  <div key={index} className="amenity-item">
-                    {amenity}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <aside className="detail-sidebar">
-            <div className="contact-card">
-              <h3>Contact Owner</h3>
-              <div className="owner-info">
-                <div className="owner-avatar">
-                  {property.owner.name.charAt(0)}
-                </div>
-                <div>
-                  <h4>{property.owner.name}</h4>
-                  <p>Member since {property.owner.memberSince}</p>
-                </div>
-              </div>
-              
-              <button onClick={handleContact} className="btn-contact">
-                📞 Call Now
-              </button>
-              <button onClick={handleContact} className="btn-message">
-                💬 Send Message
-              </button>
-              
-              <div className="contact-info">
-                <p><strong>Phone:</strong> {property.owner.phone}</p>
-                <p><strong>Email:</strong> {property.owner.email}</p>
-              </div>
-            </div>
-
-            <div className="info-card">
-              <h3>Property Information</h3>
-              <div className="info-item">
-                <span className="info-label">Type:</span>
-                <span className="info-value">{property.type}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">City:</span>
-                <span className="info-value">{property.city}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Posted:</span>
-                <span className="info-value">{property.postedDate}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Property ID:</span>
-                <span className="info-value">#{property.id}</span>
-              </div>
-            </div>
-          </aside>
+          )}
         </div>
       </div>
     </div>

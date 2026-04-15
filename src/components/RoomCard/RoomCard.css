@@ -74,6 +74,45 @@
   color: #1a2a40;
   margin: 14px 18px 8px;
 }
+/* ── Unavailable room card ── */
+.room-card--unavailable:hover {
+  transform: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+.room-card--unavailable .room-card-img {
+  filter: brightness(0.65) saturate(0.5);
+}
+.room-card-unavailable-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(25,58,106,0.78) 0%, rgba(10,20,45,0.6) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.room-card-unavailable-badge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: linear-gradient(135deg, #111c2e 0%, #1a2e50 100%);
+  border: 1.5px solid rgba(255, 215, 0, 0.65);
+  border-radius: 32px;
+  padding: 10px 24px;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.55), 0 0 0 3px rgba(255,215,0,0.08);
+  backdrop-filter: blur(4px);
+}
+.room-card-unavailable-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.room-card-unavailable-badge span:last-child {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffd700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
 .room-card-amenities {
   display: flex;
   flex-wrap: wrap;
@@ -108,4 +147,14 @@
 .room-card-book-btn:hover {
   background: linear-gradient(135deg, #1e4d8c, #2a5fa0);
   transform: translateY(-1px);
+}
+.room-card-book-btn.unavailable,
+.room-card-book-btn.unavailable:hover {
+  background: linear-gradient(135deg, #111c2e 0%, #1a2e50 100%);
+  border: 1.5px solid rgba(255, 215, 0, 0.35);
+  color: #a0afc6;
+  cursor: not-allowed;
+  transform: none;
+  letter-spacing: 0.8px;
+  opacity: 0.85;
 }
