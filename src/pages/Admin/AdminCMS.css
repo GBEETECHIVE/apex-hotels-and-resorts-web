@@ -12,7 +12,7 @@
   --border-light: #e8f1f7;
   --text: #1f3e54;
   --text-muted: #5f7f93;
-  --apex-gold: #caa560;
+  --apex-gold: #2e7d32;
   --danger: #d32f2f;
   --success: #2e7d32;
   --radius: 12px;
@@ -42,12 +42,18 @@
 }
 
 .login-logo {
-  font-size: 32px;
-  font-weight: 900;
-  letter-spacing: 6px;
-  color: var(--brand-dark);
-  text-shadow: 0 1px 0 #fff;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-logo-img {
+  max-height: 56px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .admin-login-card h1 {
@@ -147,10 +153,16 @@
 }
 
 .brand-logo {
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: 5px;
-  color: var(--brand-dark);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.brand-logo-img {
+  max-height: 42px;
+  width: auto;
+  max-width: 170px;
+  object-fit: contain;
 }
 
 .brand-sub {

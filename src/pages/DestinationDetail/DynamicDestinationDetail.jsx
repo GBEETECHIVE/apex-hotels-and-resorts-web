@@ -225,135 +225,112 @@ const DynamicDestinationDetail = () => {
       <TouristPointTabs
         destinationContent={
           <div className="tp-info-layout" style={{ display: 'block' }}>
-            <h1 className="tp-info-title">Famous Places</h1>
             {resolvedFamousPlaces.length === 0 && (
               <p className="tp-info-desc">No famous places added yet.</p>
             )}
             {resolvedFamousPlaces.length > 0 && (
               <div className="famous-places-carousel-container">
-                {/* Places Carousel Navigation */}
-                {resolvedFamousPlaces.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      className="famous-places-nav-arrow famous-places-nav-prev"
-                      onClick={() => setFamousPlaceIndex((prev) => 
-                        (prev - 1 + resolvedFamousPlaces.length) % resolvedFamousPlaces.length
-                      )}
-                      aria-label="Previous famous place"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      type="button"
-                      className="famous-places-nav-arrow famous-places-nav-next"
-                      onClick={() => setFamousPlaceIndex((prev) => 
-                        (prev + 1) % resolvedFamousPlaces.length
-                      )}
-                      aria-label="Next famous place"
-                    >
-                      ›
-                    </button>
-                  </>
-                )}
-
                 {/* Current Famous Place */}
                 {resolvedFamousPlaces.map((place, idx) => {
                   if (idx !== famousPlaceIndex) return null;
                   const currentIndex = famousImageIndexes[idx] ?? 0;
                   return (
                     <div key={`${contentKeyBase}-famous-${idx}`} className="famous-place-card">
-                      <div className="famous-place-card-badge">Famous Place {idx + 1} / {resolvedFamousPlaces.length}</div>
-                      <div className="famous-place-media">
-                        {place.images.length > 0 ? (
-                          <div className="famous-place-carousel">
-                            <div
-                              className="carousel-main-image"
-                              onClick={() => {
-                                setLightboxImages(place.images.map((url) => ({ src: url })));
-                                setLightboxIndex(currentIndex);
-                                setLightboxOpen(true);
-                              }}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  setLightboxImages(place.images.map((url) => ({ src: url })));
-                                  setLightboxIndex(currentIndex);
-                                  setLightboxOpen(true);
-                                }
-                              }}
+                      <div className="famous-place-media-wrapper">
+                        <div className="famous-place-card-badge">
+                          {resolvedFamousPlaces.length > 1 && (
+                            <button
+                              type="button"
+                              className="famous-place-badge-arrow"
+                              onClick={() => setFamousPlaceIndex((prev) =>
+                                (prev - 1 + resolvedFamousPlaces.length) % resolvedFamousPlaces.length
+                              )}
+                              aria-label="Previous famous place"
                             >
-                              <img
-                                src={place.images[currentIndex] || place.images[0]}
-                                alt={place.title || `Famous Place ${idx + 1}`}
-                                style={{ cursor: 'pointer' }}
-                              />
-                            </div>
-                            {place.images.length > 1 && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="carousel-arrow carousel-arrow-prev"
-                                  onClick={() => setFamousImageIndexes((prev) => ({
-                                    ...prev,
-                                    [idx]: ((prev[idx] ?? 0) - 1 + place.images.length) % place.images.length,
-                                  }))}
-                                  aria-label="Previous image"
-                                >
-                                  ‹
-                                </button>
-                                <button
-                                  type="button"
-                                  className="carousel-arrow carousel-arrow-next"
-                                  onClick={() => setFamousImageIndexes((prev) => ({
-                                    ...prev,
-                                    [idx]: ((prev[idx] ?? 0) + 1) % place.images.length,
-                                  }))}
-                                  aria-label="Next image"
-                                >
-                                  ›
-                                </button>
-                                <div className="carousel-dots">
-                                  {place.images.map((_, dotIndex) => (
+                              ←
+                            </button>
+                          )}
+                          <span>{idx + 1} / {resolvedFamousPlaces.length}</span>
+                          {resolvedFamousPlaces.length > 1 && (
+                            <button
+                              type="button"
+                              className="famous-place-badge-arrow"
+                              onClick={() => setFamousPlaceIndex((prev) =>
+                                (prev + 1) % resolvedFamousPlaces.length
+                              )}
+                              aria-label="Next famous place"
+                            >
+                              →
+                            </button>
+                          )}
+                        </div>
+                        <div className="activity-gallery-carousel famous-place-gallery-carousel">
+                          <div className="activity-gallery-columns famous-place-gallery-columns">
+                            <div className="famous-place-media">
+                              {place.images.length > 0 ? (
+                                <div className="activity-gallery-image-panel famous-place-gallery-panel">
+                                  {place.images.length > 1 && (
                                     <button
                                       type="button"
-                                      key={`${idx}-dot-${dotIndex}`}
-                                      className={`carousel-dot${dotIndex === currentIndex ? ' active' : ''}`}
-                                      onClick={() => setFamousImageIndexes((prev) => ({ ...prev, [idx]: dotIndex }))}
-                                      aria-label={`Go to image ${dotIndex + 1}`}
-                                    />
-                                  ))}
+                                      className="activity-arrow activity-arrow-left"
+                                      onClick={() => setFamousImageIndexes((prev) => ({
+                                        ...prev,
+                                        [idx]: ((prev[idx] ?? 0) - 1 + place.images.length) % place.images.length,
+                                      }))}
+                                      aria-label="Previous image"
+                                    >
+                                      ←
+                                    </button>
+                                  )}
+                                  <img
+                                    src={place.images[currentIndex] || place.images[0]}
+                                    alt={place.title || `Famous Place ${idx + 1}`}
+                                    className="activity-gallery-main-image famous-place-gallery-main-image"
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => {
+                                      setLightboxImages(place.images.map((url) => ({ src: url })));
+                                      setLightboxIndex(currentIndex);
+                                      setLightboxOpen(true);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        setLightboxImages(place.images.map((url) => ({ src: url })));
+                                        setLightboxIndex(currentIndex);
+                                        setLightboxOpen(true);
+                                      }
+                                    }}
+                                  />
+                                  {place.images.length > 1 && (
+                                    <button
+                                      type="button"
+                                      className="activity-arrow activity-arrow-right"
+                                      onClick={() => setFamousImageIndexes((prev) => ({
+                                        ...prev,
+                                        [idx]: ((prev[idx] ?? 0) + 1) % place.images.length,
+                                      }))}
+                                      aria-label="Next image"
+                                    >
+                                      →
+                                    </button>
+                                  )}
                                 </div>
-                              </>
-                            )}
+                              ) : (
+                                <div className="famous-place-empty">No image added</div>
+                              )}
+                            </div>
+                            <div className="activity-gallery-info-panel famous-place-content">
+                              {place.title && <h3 className="famous-place-title">{place.title}</h3>}
+                              {place.description && <p className="famous-place-desc">{place.description}</p>}
+                            </div>
                           </div>
-                        ) : (
-                          <div className="famous-place-empty">No image added</div>
-                        )}
-                      </div>
-                      <div className="famous-place-content">
-                        {place.title && <h3 className="famous-place-title">{place.title}</h3>}
-                        {place.description && <p className="famous-place-desc">{place.description}</p>}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
 
-                {/* Place Indicators */}
-                {resolvedFamousPlaces.length > 1 && (
-                  <div className="famous-places-indicators">
-                    {resolvedFamousPlaces.map((_, idx) => (
-                      <button
-                        type="button"
-                        key={`place-indicator-${idx}`}
-                        className={`place-indicator${idx === famousPlaceIndex ? ' active' : ''}`}
-                        onClick={() => setFamousPlaceIndex(idx)}
-                        aria-label={`Go to famous place ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
+                {/* Place indicators removed by design request */}
               </div>
             )}
           </div>

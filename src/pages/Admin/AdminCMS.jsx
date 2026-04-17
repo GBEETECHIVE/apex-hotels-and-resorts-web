@@ -143,6 +143,7 @@ const AdminCMS = () => {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [brandLogo, setBrandLogo] = useState('');
 
   /* booking filters */
   const [bookingSearch, setBookingSearch] = useState('');
@@ -154,6 +155,7 @@ const AdminCMS = () => {
 
   /* ── helpers ───────────────────────────────────── */
   const homePage = cmsData.homePage || {};
+  const adminBrandLogo = homePage.brandLogo || brandLogo || '';
   const destinations = cmsData.destinations || [];
   const formatDateLocal = (date) => {
     const y = date.getFullYear();
@@ -229,6 +231,22 @@ const AdminCMS = () => {
     if (!token) { setLoading(false); return; }
     loadDashboard(token);
   }, [token, loadDashboard]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchCms()
+      .then((cms) => {
+        if (!mounted) return;
+        setBrandLogo(cms?.homePage?.brandLogo || '');
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setBrandLogo('');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   /* ── destination/point helpers ──────────────────── */
   const selectedDestination = useMemo(
@@ -638,7 +656,11 @@ const AdminCMS = () => {
     return (
       <div className="admin-login-page">
         <div className="admin-login-card">
-          <div className="login-logo">APEX</div>
+          <div className="login-logo">
+            {adminBrandLogo ? (
+              <img src={adminBrandLogo} alt="Brand logo" className="login-logo-img" />
+            ) : null}
+          </div>
           <h1>Admin Panel</h1>
           <p>Sign in to manage your content</p>
           <form onSubmit={handleLogin} className="admin-login-form">
@@ -1156,7 +1178,7 @@ const AdminCMS = () => {
             <textarea rows={3} value={destinationContent.galleryDescription || ''} onChange={(e) => patchDestinationContentField('destinationGalleryDescription', e.target.value)} placeholder="Explore our beautiful destination..." />
           </div>
           <div className="form-group full">
-            <label>Gallery / Hero Images (used in destination hero)</label>
+            <label>Gallery / Hero Images (used in destination hero, 3 recommended)</label>
             <input
               type="file"
               accept="image/*"
@@ -1575,7 +1597,11 @@ const AdminCMS = () => {
       {/* Sidebar */}
       <aside className={`admin-sidebar${sidebarOpen ? ' open' : ''}`}>
         <div className="sidebar-brand">
-          <span className="brand-logo">APEX</span>
+          <span className="brand-logo">
+            {adminBrandLogo ? (
+              <img src={adminBrandLogo} alt="Brand logo" className="brand-logo-img" />
+            ) : null}
+          </span>
           <span className="brand-sub">CMS Panel</span>
         </div>
         <nav className="sidebar-nav">
