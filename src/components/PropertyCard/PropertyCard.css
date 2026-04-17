@@ -31,6 +31,25 @@
   font-weight: 600;
 }
 
+.availability-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 0.4rem 0.9rem;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+}
+
+.availability-badge.available {
+  background-color: #27ae60;
+}
+
+.availability-badge.booked {
+  background-color: #e74c3c;
+}
+
 .property-details {
   padding: 1.5rem;
 }

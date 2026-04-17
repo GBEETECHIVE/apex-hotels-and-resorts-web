@@ -8,11 +8,14 @@ const RoomCard = ({
   price,
   amenities = [],
   onBook,
+  onViewDetail,
   onGallery,
   isAvailable = true,
 }) => {
   const imgList = Array.isArray(images) && images.length > 0 ? images : (image ? [image] : []);
   const mainImg = imgList[0] || '';
+
+  const statusLabel = isAvailable ? 'Available' : 'Not Available';
 
   return (
     <div className={`room-card${!isAvailable ? ' room-card--unavailable' : ''}`}>
@@ -27,25 +30,41 @@ const RoomCard = ({
           <div className="room-card-unavailable-overlay">
             <div className="room-card-unavailable-badge">
               <span className="room-card-unavailable-icon">🔒</span>
-              <span>NOT AVAILABLE</span>
+              <span>{statusLabel}</span>
             </div>
           </div>
         )}
         <div className="room-card-price">Starts From PKR {price}</div>
       </div>
-      <div className="room-card-title">{title}</div>
+      <div className="room-card-title-row">
+        <div className="room-card-title">{title}</div>
+        <div className={`room-card-status-badge${isAvailable ? ' available' : ' unavailable'}`}>
+          {statusLabel}
+        </div>
+      </div>
       <div className="room-card-amenities">
         {amenities.map((item, idx) => (
           <span key={idx} className="room-card-amenity">{item.icon} {item.label}</span>
         ))}
       </div>
-      <button
-        className={`room-card-book-btn${!isAvailable ? ' unavailable' : ''}`}
-        onClick={onBook}
-        disabled={!isAvailable}
-      >
-        {isAvailable ? 'Book Now' : '🔒 Room Not Available'}
-      </button>
+      <div className="room-card-actions">
+        {typeof onViewDetail === 'function' && (
+          <button
+            className="room-card-view-btn"
+            onClick={onViewDetail}
+          >
+            View Details
+          </button>
+        )}
+        {isAvailable && (
+          <button
+            className="room-card-book-btn"
+            onClick={onBook}
+          >
+            Book Now
+          </button>
+        )}
+      </div>
     </div>
   );
 };

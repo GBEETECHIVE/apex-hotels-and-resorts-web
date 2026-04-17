@@ -114,34 +114,34 @@ const Footer = () => {
           </div>
         </div>
         <div className="footer-col host-col">
+          <div className="footer-host-brand">
+            <div className="footer-host-logo">
+              <svg width="46" height="46" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="6" width="48" height="48" rx="8" fill="#2d3e50"/>
+                <text x="30" y="38" textAnchor="middle" fontSize="20" fontWeight="bold" fill="#fff">Apex</text>
+              </svg>
+              <span className="footer-host-logo-text">Hotel & Resorts</span>
+            </div>
+          </div>
           <h3>WE ALSO HOST</h3>
           <div className="host-logos">
             {partnerLogos.map((p, i) => (
               <img className="host-logo" src={p.src} alt={p.alt} key={i} />
             ))}
           </div>
+          <div className="host-social-block">
+            <span>FOLLOW US</span>
+            <div className="footer-social-icons">
+              {socialLinks.map((s, i) => (
+                <a href={s.href} key={i} target="_blank" rel="noopener noreferrer" style={{ color: s.color }}>
+                  <i className={s.icon}></i>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <div className="footer-social-row">
-        <div className="footer-logo-row">
-          <div className="footer-logo-v2">
-            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="6" y="6" width="48" height="48" rx="8" fill="white"/>
-              <text x="30" y="38" textAnchor="middle" fontSize="32" fontWeight="bold" fill="#2d3e50">R</text>
-            </svg>
-            <span className="footer-logo-text">ROOMY</span>
-          </div>
-        </div>
-        <div className="footer-social-block">
-          <span>SOCIAL WITH US</span>
-          <div className="footer-social-icons">
-            {socialLinks.map((s, i) => (
-              <a href={s.href} key={i} target="_blank" rel="noopener noreferrer" style={{ color: s.color }}>
-                <i className={s.icon}></i>
-              </a>
-            ))}
-          </div>
-        </div>
         <div className="footer-payments">
           {paymentLogos.map((p, i) => (
             <img className="payment-logo" src={p.src} alt={p.alt} key={i} />

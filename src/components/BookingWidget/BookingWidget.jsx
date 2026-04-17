@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './BookingWidget.css';
+import { fetchCms } from '../../services/cmsApi';
 
 const BookingWidget = ({ onSearch }) => {
-  const locations = ['Islamabad', 'Murree', 'Naran Valley', 'Bata Kundi', 'Lahore'];
+  const navigate = useNavigate();
+  const defaultLocations = [
+    { label: 'Islamabad', value: 'islamabad' },
+    { label: 'Murree', value: 'murree' },
+    { label: 'Naran Valley', value: 'naran-valley' },
+    { label: 'Bata Kundi', value: 'bata-kundi' },
+    { label: 'Lahore', value: 'lahore' },
+  ];
+  const [locations, setLocations] = useState(defaultLocations);
+
   const formatDate = (d) => d.toISOString().slice(0, 10);
   const today = new Date();
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
-  const [location, setLocation] = useState(locations[0]);
+  const [selectedLocation, setSelectedLocation] = useState(defaultLocations[0]);
   const [checkIn, setCheckIn] = useState(formatDate(today));
   const [checkOut, setCheckOut] = useState(formatDate(tomorrow));
   const [rooms, setRooms] = useState(1);
@@ -17,21 +28,66 @@ const BookingWidget = ({ onSearch }) => {
   const [showDates, setShowDates] = useState(false);
   const [showRooms, setShowRooms] = useState(false);
 
+  // Fetch locations from CMS
   useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const cms = await fetchCms();
+        if (cms?.destinations && Array.isArray(cms.destinations) && cms.destinations.length > 0) {
+          const destinationOptions = cms.destinations
+            .filter((d) => d?.name && d?.slug)
+            .map((d) => ({ label: d.name, value: d.slug }));
+          if (destinationOptions.length > 0) {
+            setLocations(destinationOptions);
+            setSelectedLocation(destinationOptions[0]);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load destinations from CMS:', error);
+        // Keep default locations on error
+      }
+    };
+
+    loadLocations();
+  }, []);
+
+  useEffect(() => {
+    const today = new Date();
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    // Ensure check-in is not in the past
+    if (new Date(checkIn) < today) {
+      setCheckIn(formatDate(today));
+    }
+    
+    // Ensure check-out is after check-in
     if (new Date(checkOut) <= new Date(checkIn)) {
       const next = new Date(new Date(checkIn).getTime() + 24 * 60 * 60 * 1000);
       setCheckOut(formatDate(next));
     }
-  }, [checkIn]);
+  }, [checkIn, checkOut]);
 
   const incrementRooms = () => setRooms((r) => Math.min(10, r + 1));
   const decrementRooms = () => setRooms((r) => Math.max(1, r - 1));
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const payload = { location, checkIn, checkOut, rooms };
+    const payload = {
+      location: selectedLocation.label,
+      destination: selectedLocation.value,
+      checkIn,
+      checkOut,
+      rooms,
+    };
     if (onSearch) onSearch(payload);
-    alert(`Searching: ${location} ${checkIn} → ${checkOut} • ${rooms} room(s)`);
+    
+    const params = new URLSearchParams();
+    params.append('destination', selectedLocation.value);
+    params.append('checkIn', checkIn);
+    params.append('checkOut', checkOut);
+    params.append('rooms', rooms);
+    
+    navigate(`/listings?${params.toString()}`);
   };
 
   return (
@@ -40,11 +96,18 @@ const BookingWidget = ({ onSearch }) => {
         <div className="booking-field card-field" onClick={() => setShowLocation(true)}>
           <label>Location</label>
           {!showLocation ? (
-            <div className="card-value">{location}</div>
+            <div className="card-value">{selectedLocation.label}</div>
           ) : (
-            <select value={location} onChange={(e) => setLocation(e.target.value)} onBlur={() => setShowLocation(false)}>
+            <select
+              value={selectedLocation.value}
+              onChange={(e) => {
+                const nextLocation = locations.find((loc) => loc.value === e.target.value);
+                if (nextLocation) setSelectedLocation(nextLocation);
+              }}
+              onBlur={() => setShowLocation(false)}
+            >
               {locations.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
+                <option key={loc.value} value={loc.value}>{loc.label}</option>
               ))}
             </select>
           )}

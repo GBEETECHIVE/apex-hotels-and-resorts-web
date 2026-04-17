@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { fetchCms } from '../../services/cmsApi';
+import { fetchCms, fetchRoomAvailability } from '../../services/cmsApi';
+import BookingFormModal from '../../components/BookingFormModal/BookingFormModal';
 import BannerSection from '../../components/BannerSection/BannerSection';
 import './PropertyDetail.css';
 
@@ -42,6 +43,8 @@ const PropertyDetail = () => {
   const [cmsDestinations, setCmsDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [showBookingForm, setShowBookingForm] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -102,8 +105,9 @@ const PropertyDetail = () => {
       price: formatPrice(room?.price),
       type: 'Hotel',
       beds: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      persons: Number.parseInt(room?.persons, 10) || 1,
       baths: 1,
-      area: amenities.slice(0, 2).join(' • ') || 'Hotel Room',
+      area: String(room?.area || '').trim() || amenities.slice(0, 2).join(' • ') || 'Hotel Room',
       images: roomImages.length > 0 ? roomImages : [fallbackImage].filter(Boolean),
       description:
         room?.description ||
@@ -111,8 +115,54 @@ const PropertyDetail = () => {
         destination?.shortDescription ||
         'Enjoy a comfortable stay with scenic surroundings and quality hospitality.',
       features: amenities,
+      activities: (destination?.destinationActivities || destination?.points?.[0]?.tabs?.activities || [])
+        .map((activity) => ({
+          title: String(activity?.title || '').trim(),
+          description: String(activity?.description || '').trim(),
+        }))
+        .filter((activity) => activity.title || activity.description),
+      famousPlaces: (destination?.destinationFamousPlaces || [])
+        .map((place) => ({
+          title: String(place?.title || '').trim(),
+          description: String(place?.description || '').trim(),
+        }))
+        .filter((place) => place.title || place.description),
     };
   }, [cmsDestinations, id]);
+
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!property) return;
+      const normalizeBookingValue = (value) => String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+      const normalizeResort = (name) => normalizeBookingValue(name).replace(/\s+resort\s*$/i, '').trim();
+      const normalizeRoom = (name) => normalizeBookingValue(name).replace(/\s+room\s*$/i, '').trim();
+      const hasResortMatch = (bookingResort, destinationResort) => {
+        const a = normalizeResort(bookingResort);
+        const b = normalizeResort(destinationResort);
+        if (!a || !b) return false;
+        return a === b || a.includes(b) || b.includes(a);
+      };
+
+      try {
+        const payload = await fetchRoomAvailability();
+        const unavailable = payload?.unavailableRooms || [];
+        const destinationName = property.location || '';
+        const matched = unavailable.find((b) =>
+          normalizeRoom(b.roomName) === normalizeRoom(property.title) &&
+          hasResortMatch(b.resortName, destinationName)
+        );
+        setIsAvailable(!Boolean(matched));
+      } catch (_err) {
+        setIsAvailable(true);
+      }
+    };
+
+    loadAvailability();
+  }, [property]);
 
   useEffect(() => {
     setActiveImage(0);
@@ -197,7 +247,12 @@ const PropertyDetail = () => {
               <p className="location">📍 {property.location}</p>
             </div>
             <div className="price-section">
-              <div className="price">PKR {property.price}<span>/month</span></div>
+                <div className="price">PKR {property.price}<span>/month</span></div>
+                {isAvailable ? (
+                  <button className="btn primary" onClick={() => setShowBookingForm(true)}>Book</button>
+                ) : (
+                  <button className="btn disabled" disabled>Booked</button>
+                )}
             </div>
           </div>
 
@@ -207,6 +262,13 @@ const PropertyDetail = () => {
               <div>
                 <div className="stat-value">{property.beds}</div>
                 <div className="stat-label">Bedroom</div>
+              </div>
+            </div>
+            <div className="stat">
+              <span className="stat-icon">🧑‍🤝‍🧑</span>
+              <div>
+                <div className="stat-value">{property.persons}</div>
+                <div className="stat-label">Persons</div>
               </div>
             </div>
             <div className="stat">
@@ -230,6 +292,34 @@ const PropertyDetail = () => {
             <p>{property.description}</p>
           </div>
 
+          {property.activities.length > 0 && (
+            <div className="detail-section">
+              <h2>Nearby Activities</h2>
+              <div className="features-list">
+                {property.activities.slice(0, 6).map((activity, index) => (
+                  <div key={index} className="feature-item">
+                    <span className="checkmark">•</span>
+                    <span>{activity.title || activity.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {property.famousPlaces.length > 0 && (
+            <div className="detail-section">
+              <h2>Famous Places Nearby</h2>
+              <div className="features-list">
+                {property.famousPlaces.slice(0, 6).map((place, index) => (
+                  <div key={index} className="feature-item">
+                    <span className="checkmark">•</span>
+                    <span>{place.title || place.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {property.features.length > 0 && (
             <div className="detail-section">
               <h2>Features</h2>
@@ -242,6 +332,13 @@ const PropertyDetail = () => {
                 ))}
               </div>
             </div>
+          )}
+          {showBookingForm && (
+            <BookingFormModal
+              room={{ title: property.title }}
+              resort={property.location}
+              onClose={() => setShowBookingForm(false)}
+            />
           )}
         </div>
       </div>

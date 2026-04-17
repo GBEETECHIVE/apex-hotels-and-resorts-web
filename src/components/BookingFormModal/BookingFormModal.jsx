@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './BookingFormModal.css';
 
 const BookingFormModal = ({ room, resort, onClose }) => {
@@ -6,6 +6,27 @@ const BookingFormModal = ({ room, resort, onClose }) => {
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const formatDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayStr = formatDate(new Date());
+  const minCheckoutStr = dateFrom
+    ? formatDate(new Date(new Date(dateFrom).getTime() + 24 * 60 * 60 * 1000))
+    : formatDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
+
+  useEffect(() => {
+    if (!dateFrom || !dateTo) return;
+    if (dateTo <= dateFrom) {
+      setDateTo(minCheckoutStr);
+    }
+  }, [dateFrom, dateTo, minCheckoutStr]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,6 +44,26 @@ const BookingFormModal = ({ room, resort, onClose }) => {
       roomName: room?.title || '',
       resortName: resort || 'Pindi Point, Murree',
     };
+
+    const from = new Date(data.dateFrom);
+    const to = new Date(data.dateTo);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      setError('Please select valid check-in and check-out dates.');
+      setSending(false);
+      return;
+    }
+    if (from < today) {
+      setError('Check-in date cannot be in the past.');
+      setSending(false);
+      return;
+    }
+    if (to <= from) {
+      setError('Check-out must be at least one day after check-in.');
+      setSending(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/bookings', {
@@ -87,11 +128,11 @@ const BookingFormModal = ({ room, resort, onClose }) => {
               <div className="booking-form-row">
                 <div className="booking-form-group">
                   <label htmlFor="dateFrom">Check-in</label>
-                  <input type="date" id="dateFrom" name="dateFrom" required />
+                  <input type="date" id="dateFrom" name="dateFrom" min={todayStr} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} required />
                 </div>
                 <div className="booking-form-group">
                   <label htmlFor="dateTo">Check-out</label>
-                  <input type="date" id="dateTo" name="dateTo" required />
+                  <input type="date" id="dateTo" name="dateTo" min={minCheckoutStr} value={dateTo} onChange={(e) => setDateTo(e.target.value)} required />
                 </div>
               </div>
 

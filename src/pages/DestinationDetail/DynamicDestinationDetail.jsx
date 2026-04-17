@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 import Hero from '../../components/Hero/Hero';
 import StickyBooking from '../../components/StickyBooking/StickyBooking';
 import TouristPointTabs from '../../components/TouristPointTabs/TouristPointTabs';
@@ -21,8 +23,19 @@ const stripBulletPrefix = (value) =>
   String(value || '').replace(/^\s*(?:[•·●▪◦\-*]|✔|✓|☑|✅)+\s*/, '').trim();
 
 const cleanBulletList = (value) => asLineList(value).map((line) => stripBulletPrefix(line)).filter(Boolean);
-const normalizeBookingValue = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-const getBookingRoomKey = (roomName, resortName) => `${normalizeBookingValue(roomName)}::${normalizeBookingValue(resortName)}`;
+const normalizeBookingValue = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9\s]/g, ' ')
+  .trim()
+  .replace(/\s+/g, ' ');
+const normalizeResort = (name) => normalizeBookingValue(name).replace(/\s+resort\s*$/i, '').trim();
+const normalizeRoom = (name) => normalizeBookingValue(name).replace(/\s+room\s*$/i, '').trim();
+const hasResortMatch = (bookingResort, destinationResort) => {
+  const a = normalizeResort(bookingResort);
+  const b = normalizeResort(destinationResort);
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+};
 
 const hasContentValue = (value) => {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean).length > 0;
@@ -65,8 +78,12 @@ const DynamicDestinationDetail = () => {
   const [showStickyBooking, setShowStickyBooking] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingRoom, setBookingRoom] = useState(null);
-  const [roomImagesModal, setRoomImagesModal] = useState(null);
-  const [unavailableRoomKeys, setUnavailableRoomKeys] = useState([]);
+  const [famousImageIndexes, setFamousImageIndexes] = useState({});
+  const [unavailableBookings, setUnavailableBookings] = useState([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [famousPlaceIndex, setFamousPlaceIndex] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -117,16 +134,18 @@ const DynamicDestinationDetail = () => {
   useEffect(() => {
     const loadAvailability = async () => {
       if (!destination?.name) {
-        setUnavailableRoomKeys([]);
+        setUnavailableBookings([]);
         return;
       }
 
       try {
-        const payload = await fetchRoomAvailability(destination.name);
-        const keys = (payload?.unavailableRooms || []).map((item) => item.key).filter(Boolean);
-        setUnavailableRoomKeys(keys);
+        const payload = await fetchRoomAvailability();
+        const filteredUnavailable = payload?.unavailableRooms?.filter((item) =>
+          hasResortMatch(item.resortName, destination.name)
+        ) || [];
+        setUnavailableBookings(filteredUnavailable);
       } catch (_error) {
-        setUnavailableRoomKeys([]);
+        setUnavailableBookings([]);
       }
     };
 
@@ -149,21 +168,38 @@ const DynamicDestinationDetail = () => {
   const resolvedFamousPlaces = (destinationContent.famousPlaces || []).map((place) => ({
     title: String(place?.title || '').trim(),
     description: String(place?.description || '').trim(),
-  })).filter((place) => place.title || place.description);
+    images: Array.isArray(place?.images) ? place.images.filter(Boolean) : [],
+  })).filter((place) => place.title || place.description || place.images.length > 0);
 
-  const roomCards = (destinationContent.rooms || []).map((room) => {
-    const isAvailable = !unavailableRoomKeys.includes(getBookingRoomKey(room?.title, destination?.name));
+  const roomCards = (destinationContent.rooms || []).map((room, idx) => {
+    const bookedCount = unavailableBookings.filter((item) =>
+      normalizeRoom(item.roomName) === normalizeRoom(room?.title) &&
+      hasResortMatch(item.resortName, destination?.name)
+    ).length;
+    const isFullyBooked = bookedCount > 0;
+
+    const isAvailable = !isFullyBooked;
 
     return {
       ...room,
       images: Array.isArray(room.images) ? room.images : (room.image ? [room.image] : []),
       isAvailable,
+      onViewDetail: () => {
+        const slug = destination?.slug || destinationSlug;
+        navigate(`/property/${slug}-${idx}`);
+      },
       onBook: () => {
         if (!isAvailable) return;
         setBookingRoom(room);
         setShowBookingForm(true);
       },
-      onGallery: (imgs) => setRoomImagesModal(imgs),
+      onGallery: (imgs) => {
+        const slides = (imgs || []).map((url) => ({ src: url })).filter((item) => Boolean(item.src));
+        if (slides.length === 0) return;
+        setLightboxImages(slides);
+        setLightboxIndex(0);
+        setLightboxOpen(true);
+      },
     };
   });
 
@@ -193,12 +229,133 @@ const DynamicDestinationDetail = () => {
             {resolvedFamousPlaces.length === 0 && (
               <p className="tp-info-desc">No famous places added yet.</p>
             )}
-            {resolvedFamousPlaces.map((place, idx) => (
-              <div key={`${contentKeyBase}-famous-${idx}`} style={{ marginBottom: '22px' }}>
-                {place.title && <h3 className="tp-info-title" style={{ fontSize: '1.15rem', marginBottom: '6px' }}>{place.title}</h3>}
-                {place.description && <p className="tp-info-desc" style={{ marginBottom: 0 }}>{place.description}</p>}
+            {resolvedFamousPlaces.length > 0 && (
+              <div className="famous-places-carousel-container">
+                {/* Places Carousel Navigation */}
+                {resolvedFamousPlaces.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="famous-places-nav-arrow famous-places-nav-prev"
+                      onClick={() => setFamousPlaceIndex((prev) => 
+                        (prev - 1 + resolvedFamousPlaces.length) % resolvedFamousPlaces.length
+                      )}
+                      aria-label="Previous famous place"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="famous-places-nav-arrow famous-places-nav-next"
+                      onClick={() => setFamousPlaceIndex((prev) => 
+                        (prev + 1) % resolvedFamousPlaces.length
+                      )}
+                      aria-label="Next famous place"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+
+                {/* Current Famous Place */}
+                {resolvedFamousPlaces.map((place, idx) => {
+                  if (idx !== famousPlaceIndex) return null;
+                  const currentIndex = famousImageIndexes[idx] ?? 0;
+                  return (
+                    <div key={`${contentKeyBase}-famous-${idx}`} className="famous-place-card">
+                      <div className="famous-place-card-badge">Famous Place {idx + 1} / {resolvedFamousPlaces.length}</div>
+                      <div className="famous-place-media">
+                        {place.images.length > 0 ? (
+                          <div className="famous-place-carousel">
+                            <div
+                              className="carousel-main-image"
+                              onClick={() => {
+                                setLightboxImages(place.images.map((url) => ({ src: url })));
+                                setLightboxIndex(currentIndex);
+                                setLightboxOpen(true);
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  setLightboxImages(place.images.map((url) => ({ src: url })));
+                                  setLightboxIndex(currentIndex);
+                                  setLightboxOpen(true);
+                                }
+                              }}
+                            >
+                              <img
+                                src={place.images[currentIndex] || place.images[0]}
+                                alt={place.title || `Famous Place ${idx + 1}`}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </div>
+                            {place.images.length > 1 && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="carousel-arrow carousel-arrow-prev"
+                                  onClick={() => setFamousImageIndexes((prev) => ({
+                                    ...prev,
+                                    [idx]: ((prev[idx] ?? 0) - 1 + place.images.length) % place.images.length,
+                                  }))}
+                                  aria-label="Previous image"
+                                >
+                                  ‹
+                                </button>
+                                <button
+                                  type="button"
+                                  className="carousel-arrow carousel-arrow-next"
+                                  onClick={() => setFamousImageIndexes((prev) => ({
+                                    ...prev,
+                                    [idx]: ((prev[idx] ?? 0) + 1) % place.images.length,
+                                  }))}
+                                  aria-label="Next image"
+                                >
+                                  ›
+                                </button>
+                                <div className="carousel-dots">
+                                  {place.images.map((_, dotIndex) => (
+                                    <button
+                                      type="button"
+                                      key={`${idx}-dot-${dotIndex}`}
+                                      className={`carousel-dot${dotIndex === currentIndex ? ' active' : ''}`}
+                                      onClick={() => setFamousImageIndexes((prev) => ({ ...prev, [idx]: dotIndex }))}
+                                      aria-label={`Go to image ${dotIndex + 1}`}
+                                    />
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="famous-place-empty">No image added</div>
+                        )}
+                      </div>
+                      <div className="famous-place-content">
+                        {place.title && <h3 className="famous-place-title">{place.title}</h3>}
+                        {place.description && <p className="famous-place-desc">{place.description}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Place Indicators */}
+                {resolvedFamousPlaces.length > 1 && (
+                  <div className="famous-places-indicators">
+                    {resolvedFamousPlaces.map((_, idx) => (
+                      <button
+                        type="button"
+                        key={`place-indicator-${idx}`}
+                        className={`place-indicator${idx === famousPlaceIndex ? ' active' : ''}`}
+                        onClick={() => setFamousPlaceIndex(idx)}
+                        aria-label={`Go to famous place ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+            )}
           </div>
         }
         infoTitle={resolvedInfoTitle}
@@ -257,19 +414,14 @@ const DynamicDestinationDetail = () => {
         galleryImages={destinationContent.galleryImages || []}
       />
 
-      {/* Room Images Modal */}
-      {roomImagesModal && (
-        <div className="room-images-overlay" onClick={() => setRoomImagesModal(null)}>
-          <div className="room-images-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="room-images-close" onClick={() => setRoomImagesModal(null)}>✕</button>
-            <div className="room-images-grid">
-              {roomImagesModal.map((url, idx) => (
-                <img key={idx} src={url} alt={`Room ${idx + 1}`} className="room-images-item" />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Shared Lightbox (Famous Places + Room Images) */}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxImages}
+        index={lightboxIndex}
+        onChange={(newIndex) => setLightboxIndex(newIndex)}
+      />
     </div>
   );
 };

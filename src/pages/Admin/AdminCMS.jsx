@@ -5,6 +5,7 @@ import {
   fetchCms,
   seedCms,
   updateBookingStatus,
+  updateBooking,
   updateCms,
 } from '../../services/cmsApi';
 import './AdminCMS.css';
@@ -147,11 +148,23 @@ const AdminCMS = () => {
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingFilter, setBookingFilter] = useState('all');
   const [bookingPage, setBookingPage] = useState(1);
+  const [editingBookingId, setEditingBookingId] = useState('');
+  const [bookingEdits, setBookingEdits] = useState({ dateFrom: '', dateTo: '', persons: '' });
   const BOOKINGS_PER_PAGE = 10;
 
   /* ── helpers ───────────────────────────────────── */
   const homePage = cmsData.homePage || {};
   const destinations = cmsData.destinations || [];
+  const formatDateLocal = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+  const todayDateStr = formatDateLocal(new Date());
+  const nextDayFromCheckIn = bookingEdits.dateFrom
+    ? formatDateLocal(new Date(new Date(bookingEdits.dateFrom).getTime() + 24 * 60 * 60 * 1000))
+    : formatDateLocal(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
   const patchHome = useCallback((key, value) => {
     setCmsData((prev) => ({
@@ -443,7 +456,7 @@ const AdminCMS = () => {
 
   // rooms
   const addRoom = () => {
-    const rooms = [...(destinationContent.rooms || []), { images: [], title: '', price: '', quantity: '', amenities: [] }];
+    const rooms = [...(destinationContent.rooms || []), { images: [], title: '', price: '', quantity: '', persons: '', area: '', amenities: [] }];
     patchDestinationContentField('destinationRooms', rooms);
   };
   const removeRoom = (idx) => patchDestinationContentField('destinationRooms', (destinationContent.rooms || []).filter((_, i) => i !== idx));
@@ -476,9 +489,34 @@ const AdminCMS = () => {
     patchDestinationContentField('destinationActivities', (destinationContent.activities || []).map((a, i) => i === idx ? { ...a, [field]: val } : a));
   };
   // famous places
-  const addFamousPlace = () => patchDestinationContentField('destinationFamousPlaces', [...(destinationContent.famousPlaces || []), { title: '', description: '' }]);
+  const addFamousPlace = () => patchDestinationContentField('destinationFamousPlaces', [...(destinationContent.famousPlaces || []), { title: '', description: '', images: [] }]);
   const removeFamousPlace = (idx) => patchDestinationContentField('destinationFamousPlaces', (destinationContent.famousPlaces || []).filter((_, i) => i !== idx));
   const updateFamousPlace = (idx, field, val) => patchDestinationContentField('destinationFamousPlaces', (destinationContent.famousPlaces || []).map((p, i) => i === idx ? { ...p, [field]: val } : p));
+  const removeFamousPlaceImage = (idx, imageIdx) => {
+    patchDestinationContentField('destinationFamousPlaces', (destinationContent.famousPlaces || []).map((p, i) => {
+      if (i !== idx) return p;
+      const images = [...(p.images || [])].filter((_, j) => j !== imageIdx);
+      return { ...p, images };
+    }));
+  };
+  const uploadFamousPlaceImages = async (idx, files) => {
+    if (!files || files.length === 0) return;
+    const uploaded = [];
+    for (const file of Array.from(files)) {
+      try {
+        const imageData = await uploadImage(file);
+        uploaded.push(imageData);
+      } catch (err) {
+        setError(err.message || 'Failed to upload famous place image.');
+      }
+    }
+    if (uploaded.length > 0) {
+      patchDestinationContentField('destinationFamousPlaces', (destinationContent.famousPlaces || []).map((p, i) => {
+        if (i !== idx) return p;
+        return { ...p, images: [...(p.images || []).filter(Boolean), ...uploaded] };
+      }));
+    }
+  };
 
   const updateActivityImage = (aIdx, imgIdx, val) => {
     patchDestinationContentField('destinationActivities', (destinationContent.activities || []).map((a, i) => {
@@ -512,10 +550,63 @@ const AdminCMS = () => {
   const handleBookingStatus = async (bookingId, val) => {
     try {
       await updateBookingStatus(bookingId, val, token);
-      setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: val } : b));
+      setBookings((prev) => prev.map((b) => b.bookingId === bookingId ? { ...b, status: val } : b));
       setStatus('Booking status updated.');
       setError('');
     } catch (err) { setError(err.message); }
+  };
+
+  const handleBookingEditStart = (booking) => {
+    setEditingBookingId(booking.id);
+    setBookingEdits({ dateFrom: booking.dateFrom || '', dateTo: booking.dateTo || '', persons: booking.persons || '' });
+    setError('');
+    setStatus('');
+  };
+
+  const handleBookingEditChange = (field, value) => {
+    setBookingEdits((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleBookingSave = async (bookingId) => {
+    const { dateFrom, dateTo, persons } = bookingEdits;
+    if (!dateFrom || !dateTo) {
+      setError('Both check-in and check-out dates are required.');
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const fromDate = new Date(dateFrom);
+    const toDate = new Date(dateTo);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      setError('Please select valid check-in and check-out dates.');
+      return;
+    }
+    if (fromDate < today) {
+      setError('Check-in date cannot be in the past.');
+      return;
+    }
+    if (toDate <= fromDate) {
+      setError('Check-out date must be at least one day after check-in date.');
+      return;
+    }
+
+    try {
+      const result = await updateBooking(bookingId, { dateFrom, dateTo, persons }, token);
+      setBookings((prev) => prev.map((b) => b.bookingId === bookingId ? { ...b, dateFrom: result.booking.dateFrom, dateTo: result.booking.dateTo, persons: result.booking.persons } : b));
+      setStatus('Booking dates updated successfully.');
+      setError('');
+      setEditingBookingId('');
+    } catch (err) {
+      setError(err.message || 'Failed to save booking dates.');
+    }
+  };
+
+  const handleBookingCancel = () => {
+    setEditingBookingId('');
+    setBookingEdits({ dateFrom: '', dateTo: '', persons: '' });
+    setError('');
+    setStatus('');
   };
 
   const handleLogin = async (e) => {
@@ -762,8 +853,32 @@ const AdminCMS = () => {
         <h2 className="section-title">📞 Contact Info</h2>
         <p className="section-desc">Update contact details shown on the homepage.</p>
         <div className="form-grid">
+          <div className="form-group full"><label>Brand Logo URL</label><input value={homePage.brandLogo || ''} onChange={(e) => patchHome('brandLogo', e.target.value)} placeholder="https://" /></div>
+          <div className="form-group full">
+            <label>Upload Brand Logo</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const imageUrl = await uploadImage(file);
+                  patchHome('brandLogo', imageUrl);
+                } catch (err) {
+                  setError(err.message || 'Failed to upload logo.');
+                } finally {
+                  e.target.value = '';
+                }
+              }}
+            />
+          </div>
           <div className="form-group"><label>Phone</label><input value={contact.phone || ''} onChange={(e) => patchHomeNested('contact', 'phone', e.target.value)} /></div>
           <div className="form-group"><label>Email</label><input value={contact.email || ''} onChange={(e) => patchHomeNested('contact', 'email', e.target.value)} /></div>
+          <div className="form-group"><label>WhatsApp URL</label><input value={(contact.social || {}).whatsapp || ''} onChange={(e) => patchHomeNested('contact', 'social', { ...(contact.social || {}), whatsapp: e.target.value })} /></div>
+          <div className="form-group"><label>Facebook URL</label><input value={(contact.social || {}).facebook || ''} onChange={(e) => patchHomeNested('contact', 'social', { ...(contact.social || {}), facebook: e.target.value })} /></div>
+          <div className="form-group"><label>Instagram URL</label><input value={(contact.social || {}).instagram || ''} onChange={(e) => patchHomeNested('contact', 'social', { ...(contact.social || {}), instagram: e.target.value })} /></div>
+          <div className="form-group"><label>Twitter URL</label><input value={(contact.social || {}).twitter || ''} onChange={(e) => patchHomeNested('contact', 'social', { ...(contact.social || {}), twitter: e.target.value })} /></div>
           <div className="form-group full"><label>Form Heading</label><input value={contact.formTitle || ''} onChange={(e) => patchHomeNested('contact', 'formTitle', e.target.value)} /></div>
         </div>
       </div>
@@ -852,12 +967,20 @@ const AdminCMS = () => {
                   <input value={room.title || ''} onChange={(e) => updateRoom(rIdx, 'title', e.target.value)} placeholder="Deluxe Master Room" />
                 </div>
                 <div className="form-group">
-                  <label>Price (PKR)</label>
+                  <label>Price Per Day (PKR)</label>
                   <input value={room.price || ''} onChange={(e) => updateRoom(rIdx, 'price', e.target.value)} placeholder="14,000" />
                 </div>
                 <div className="form-group">
                   <label>Quantity</label>
                   <input value={room.quantity || ''} onChange={(e) => updateRoom(rIdx, 'quantity', e.target.value)} placeholder="05" />
+                </div>
+                <div className="form-group">
+                  <label>No. of Persons</label>
+                  <input value={room.persons || ''} onChange={(e) => updateRoom(rIdx, 'persons', e.target.value)} placeholder="2" />
+                </div>
+                <div className="form-group">
+                  <label>Area</label>
+                  <input value={room.area || ''} onChange={(e) => updateRoom(rIdx, 'area', e.target.value)} placeholder="450 sq ft" />
                 </div>
 
                 {/* Room Images */}
@@ -990,10 +1113,32 @@ const AdminCMS = () => {
                   <label>Description</label>
                   <textarea rows={3} value={place.description || ''} onChange={(e) => updateFamousPlace(idx, 'description', e.target.value)} placeholder="Describe this place..." />
                 </div>
+                <div className="form-group full">
+                  <label>Famous Place Images</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={async (e) => {
+                      await uploadFamousPlaceImages(idx, e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+                {(place.images || []).filter(Boolean).length > 0 && (
+                  <div className="form-group full image-preview-grid">
+                    {(place.images || []).filter(Boolean).map((imgUrl, imageIdx) => (
+                      <div key={`${idx}-${imageIdx}`} className="img-thumb image-thumb-small">
+                        <img src={imgUrl} alt={`Famous place ${idx + 1} image ${imageIdx + 1}`} />
+                        <button type="button" className="btn-icon danger" onClick={() => removeFamousPlaceImage(idx, imageIdx)} title="Remove image">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
-          <button className="btn outline" onClick={addFamousPlace}>+ Add Famous Place</button>
+          <button type="button" className="btn outline" onClick={addFamousPlace}>+ Add Famous Place</button>
         </div>
       );
     };
@@ -1323,7 +1468,7 @@ const AdminCMS = () => {
           <div className="table-wrap">
             <table className="data-table">
               <thead>
-                <tr><th>Guest</th><th>Mobile</th><th>Email</th><th>Room</th><th>Resort</th><th>Dates</th><th>Persons</th><th>Status</th></tr>
+                <tr><th>Guest</th><th>Mobile</th><th>Email</th><th>Room</th><th>Resort</th><th>Dates</th><th>Persons</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {paged.map((b) => (
@@ -1333,16 +1478,58 @@ const AdminCMS = () => {
                     <td>{b.email}</td>
                     <td>{b.roomName}</td>
                     <td>{b.resortName}</td>
-                    <td className="nowrap">{b.dateFrom} → {b.dateTo}</td>
-                    <td>{b.persons || '—'}</td>
+                    <td className="nowrap">
+                      {editingBookingId === b.id ? (
+                        <div className="booking-edit-dates">
+                          <input
+                            type="date"
+                            value={bookingEdits.dateFrom}
+                            min={todayDateStr}
+                            onChange={(e) => handleBookingEditChange('dateFrom', e.target.value)}
+                          />
+                          <span>→</span>
+                          <input
+                            type="date"
+                            value={bookingEdits.dateTo}
+                            min={nextDayFromCheckIn}
+                            onChange={(e) => handleBookingEditChange('dateTo', e.target.value)}
+                          />
+                        </div>
+                      ) : (
+                        <>{b.dateFrom} → {b.dateTo}</>
+                      )}
+                    </td>
                     <td>
-                      <select className={`status-select ${b.status}`} value={b.status} onChange={(e) => handleBookingStatus(b.id, e.target.value)}>
+                      {editingBookingId === b.id ? (
+                        <input
+                          type="number"
+                          value={bookingEdits.persons}
+                          min="1"
+                          onChange={(e) => handleBookingEditChange('persons', e.target.value)}
+                          className="booking-persons-input"
+                        />
+                      ) : (
+                        b.persons || '—'
+                      )}
+                    </td>
+                    <td>
+                      <select className={`status-select ${b.status}`} value={b.status} onChange={(e) => handleBookingStatus(b.bookingId || b.id, e.target.value)}>
                         <option value="new">New</option>
                         <option value="confirmed">Confirmed</option>
                         <option value="pending">Pending</option>
                         <option value="cancelled">Cancelled</option>
                         <option value="email_failed">Email Failed</option>
                       </select>
+                    </td>
+                    <td>
+                      {editingBookingId === b.id ? (
+                        <div className="booking-edit-actions">
+                          <button className="btn small" onClick={() => handleBookingSave(b.bookingId || b.id)}>Save</button>
+                          <button className="btn small outline" onClick={handleBookingCancel}>Cancel</button>
+                        </div>
+                      ) : (
+                        <button className="btn small outline" onClick={() => handleBookingEditStart(b)}>Edit</button>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -69,9 +69,26 @@ const readJsonObject = (filePath, fallback = {}) => {
   }
 };
 
-const normalizeBookingValue = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-const getBookingRoomKey = (roomName, resortName) => `${normalizeBookingValue(roomName)}::${normalizeBookingValue(resortName)}`;
+const normalizeBookingValue = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9\s]/g, ' ')
+  .trim()
+  .replace(/\s+/g, ' ');
+const normalizeResort = (name) => normalizeBookingValue(name).replace(/\s+resort\s*$/i, '').trim();
+const normalizeRoom = (name) => normalizeBookingValue(name).replace(/\s+room\s*$/i, '').trim();
+const getBookingRoomKey = (roomName, resortName) => `${normalizeRoom(roomName)}::${normalizeResort(resortName)}`;
 
+const normalizeIsoDate = (value) => {
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  } catch (_e) {
+    return null;
+  }
+};
+
+const getTodayIsoDate = () => normalizeIsoDate(new Date());
 const authorizeAdmin = (req, res, next) => {
   const legacyKey = req.headers['x-admin-key'];
   const authHeader = req.headers.authorization || '';
@@ -249,6 +266,52 @@ const createGuestHtml = (data) => `
   </div>
 `;
 
+const createContactAdminHtml = (data) => `
+  <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background:#fff">
+    <div style="background:#2d3e50;padding:20px;text-align:center">
+      <h2 style="color:#fff;margin:0">APEX Hotels and Resorts</h2>
+      <p style="color:#b7c2cc;margin:6px 0 0">New Contact Inquiry</p>
+    </div>
+    <div style="padding:24px">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:8px 0;color:#777">Name</td><td style="padding:8px 0;font-weight:600">${data.name}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Email</td><td style="padding:8px 0">${data.email}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Phone</td><td style="padding:8px 0">${data.phone}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Subject</td><td style="padding:8px 0">${data.subject}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Message</td><td style="padding:8px 0">${data.message}</td></tr>
+      </table>
+    </div>
+  </div>
+`;
+
+const createContactGuestHtml = (data) => `
+  <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background:#fff">
+    <div style="background:#2d3e50;padding:28px 20px;text-align:center">
+      <h2 style="color:#fff;margin:0">APEX Hotels and Resorts</h2>
+    </div>
+    <div style="padding:26px">
+      <p>Dear ${data.name},</p>
+      <p>
+        Thank you for contacting APEX Hotels and Resorts. We have received your message and our team will get back to you shortly.
+      </p>
+      <p>
+        Subject: <strong>${data.subject}</strong>
+      </p>
+      <p>
+        Message:
+      </p>
+      <p style="white-space:pre-wrap;color:#333">${data.message}</p>
+      <p>
+        If you need immediate assistance, please call us at ${data.phone || process.env.ADMIN_EMAIL}.
+      </p>
+      <p>
+        Warm regards,<br />
+        APEX Hotels and Resorts Team
+      </p>
+    </div>
+  </div>
+`;
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
@@ -387,7 +450,7 @@ app.get('/api/admin/bookings', authorizeAdmin, (_req, res) => {
     .then((bookings) => {
       const normalized = bookings.map((item) => ({
         id: item.bookingId,
-        fullName: item.fullName,
+        bookingId: item.bookingId,        bookingId: item.bookingId,        fullName: item.fullName,
         email: item.email,
         mobile: item.mobile,
         dateFrom: item.dateFrom,
@@ -410,7 +473,7 @@ app.get('/api/admin/bookings', authorizeAdmin, (_req, res) => {
 
 app.patch('/api/admin/bookings/:id/status', authorizeAdmin, (req, res) => {
   const { id } = req.params;
-  const { status } = req.body || {};
+  const status = String(req.body?.status || '').trim().toLowerCase();
 
   if (!status) {
     return res.status(400).json({ error: 'status is required.' });
@@ -429,6 +492,7 @@ app.patch('/api/admin/bookings/:id/status', authorizeAdmin, (req, res) => {
       return res.json({
         booking: {
           id: updated.bookingId,
+          bookingId: updated.bookingId,
           fullName: updated.fullName,
           email: updated.email,
           mobile: updated.mobile,
@@ -450,26 +514,126 @@ app.patch('/api/admin/bookings/:id/status', authorizeAdmin, (req, res) => {
     });
 });
 
+app.patch('/api/admin/bookings/:id', authorizeAdmin, (req, res) => {
+  const { id } = req.params;
+  const { dateFrom, dateTo, persons } = req.body || {};
+
+  if (!dateFrom || !dateTo) {
+    return res.status(400).json({ error: 'dateFrom and dateTo are required.' });
+  }
+
+  const normFrom = normalizeIsoDate(dateFrom);
+  const normTo = normalizeIsoDate(dateTo);
+  if (!normFrom || !normTo) {
+    return res.status(400).json({ error: 'Invalid date format for dateFrom or dateTo.' });
+  }
+  const todayIso = getTodayIsoDate();
+  if (todayIso && normFrom < todayIso) {
+    return res.status(400).json({ error: 'dateFrom cannot be in the past.' });
+  }
+  if (new Date(normTo) <= new Date(normFrom)) {
+    return res.status(400).json({ error: 'dateTo must be at least one day after dateFrom.' });
+  }
+
+  return Booking.findOneAndUpdate(
+    { bookingId: id },
+    { $set: { dateFrom: normFrom, dateTo: normTo, persons: persons || undefined } },
+    { returnDocument: 'after' }
+  )
+    .lean()
+    .then((updated) => {
+      if (!updated) {
+        return res.status(404).json({ error: 'Booking not found.' });
+      }
+      return res.json({
+        booking: {
+          id: updated.bookingId,
+          bookingId: updated.bookingId,
+          fullName: updated.fullName,
+          email: updated.email,
+          mobile: updated.mobile,
+          dateFrom: updated.dateFrom,
+          dateTo: updated.dateTo,
+          persons: updated.persons,
+          roomName: updated.roomName,
+          resortName: updated.resortName,
+          status: updated.status,
+          error: updated.error,
+          createdAt: updated.createdAt,
+          updatedAt: updated.updatedAt,
+        },
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to update booking in MongoDB:', error);
+      res.status(500).json({ error: 'Failed to update booking.' });
+    });
+});
+
+const isActiveBooking = (item) => {
+  if (!item?.dateFrom || !item?.dateTo) return false;
+  const today = new Date();
+  const bookingTo = new Date(item.dateTo);
+  if (Number.isNaN(bookingTo.getTime())) return false;
+  return bookingTo >= today;
+};
+
 app.get('/api/bookings/availability', async (req, res) => {
   const resortQuery = normalizeBookingValue(req.query?.resortName || '');
 
   try {
-    const confirmed = await Booking.find({ status: 'confirmed' }).lean();
+    const confirmed = await Booking.find({ status: { $regex: /^confirmed$/i } }).lean();
     const unavailableRooms = confirmed
       .filter((item) => {
+        if (!isActiveBooking(item)) return false;
         if (!resortQuery) return true;
         return normalizeBookingValue(item.resortName) === resortQuery;
       })
       .map((item) => ({
+        id: item.bookingId,
         roomName: item.roomName,
         resortName: item.resortName,
+        dateFrom: normalizeIsoDate(item.dateFrom) || String(item.dateFrom || ''),
+        dateTo: normalizeIsoDate(item.dateTo) || String(item.dateTo || ''),
         key: getBookingRoomKey(item.roomName, item.resortName),
       }));
+
+    console.log('Unavailable rooms:', unavailableRooms);
 
     return res.json({ unavailableRooms });
   } catch (error) {
     console.error('Failed to fetch booking availability:', error);
     return res.status(500).json({ error: 'Failed to fetch booking availability.' });
+  }
+});
+
+app.post('/api/contact', async (req, res) => {
+  const { name, email, phone, subject, message } = req.body || {};
+  if (!name || !email || !phone || !subject || !message) {
+    return res.status(400).json({ error: 'Missing required contact fields.' });
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `APEX Hotels and Resorts <${process.env.FROM_EMAIL}>`,
+      to: process.env.ADMIN_EMAIL,
+      replyTo: email,
+      subject: `New contact inquiry: ${subject}`,
+      html: createContactAdminHtml({ name, email, phone, subject, message }),
+    });
+
+    await transporter.sendMail({
+      from: `APEX Hotels and Resorts <${process.env.FROM_EMAIL}>`,
+      to: email,
+      replyTo: process.env.ADMIN_EMAIL,
+      subject: 'Thank you for contacting APEX Hotels and Resorts',
+      html: createContactGuestHtml({ name, subject, message, phone }),
+    });
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Contact email error:', error);
+    return res.status(500).json({ error: 'Failed to send contact email. Please try again later.' });
   }
 });
 
@@ -480,13 +644,26 @@ app.post('/api/bookings', async (req, res) => {
     return res.status(400).json({ error: 'Missing required booking fields.' });
   }
 
+  const normFrom = normalizeIsoDate(dateFrom);
+  const normTo = normalizeIsoDate(dateTo);
+  if (!normFrom || !normTo) {
+    return res.status(400).json({ error: 'Invalid date format for dateFrom or dateTo.' });
+  }
+  const todayIso = getTodayIsoDate();
+  if (todayIso && normFrom < todayIso) {
+    return res.status(400).json({ error: 'dateFrom cannot be in the past.' });
+  }
+  if (new Date(normTo) <= new Date(normFrom)) {
+    return res.status(400).json({ error: 'dateTo must be at least one day after dateFrom.' });
+  }
+
   const bookingRecord = {
     bookingId: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     fullName,
     email,
     mobile,
-    dateFrom,
-    dateTo,
+    dateFrom: normFrom,
+    dateTo: normTo,
     persons,
     roomName,
     resortName,
@@ -496,14 +673,21 @@ app.post('/api/bookings', async (req, res) => {
 
   try {
     const roomKey = getBookingRoomKey(roomName, resortName);
-    const confirmedRooms = await Booking.find({ status: 'confirmed' }).lean();
-    const conflictingBooking = confirmedRooms.find(
-      (row) => getBookingRoomKey(row.roomName, row.resortName) === roomKey
-    );
+    const confirmedRooms = await Booking.find({ status: { $regex: /^confirmed$/i } }).lean();
+    const checkIn = new Date(normFrom);
+    const checkOut = new Date(normTo);
+
+    const conflictingBooking = confirmedRooms.find((row) => {
+      if (getBookingRoomKey(row.roomName, row.resortName) !== roomKey) return false;
+      if (!row.dateFrom || !row.dateTo) return false;
+      const bookingFrom = new Date(row.dateFrom);
+      const bookingTo = new Date(row.dateTo);
+      return checkIn < bookingTo && checkOut > bookingFrom;
+    });
 
     if (conflictingBooking) {
       return res.status(409).json({
-        error: 'This room is already confirmed and not available right now.',
+        error: 'This room is already confirmed for the selected dates and not available right now.',
       });
     }
 

@@ -44,7 +44,7 @@
 }
 
 /* Carousel Navigation */
-.carousel-nav {
+.hero .carousel-nav {
   position: absolute;
   bottom: 40px;
   left: 3rem;
@@ -56,15 +56,23 @@
   gap: 0.75rem;
 }
 
-.carousel-dots {
+.hero .carousel-dots {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   width: auto;
   gap: 0.5rem;
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
 }
 
-.carousel-dot {
+.hero .carousel-dot {
   background: transparent;
   border: none;
   color: white;
@@ -75,17 +83,22 @@
   transition: all 0.3s ease;
   padding: 0.3rem 0.7rem;
   min-width: 2.2rem;
+  width: auto;
+  height: auto;
   text-align: center;
   border-radius: 6px;
 }
 
-.carousel-dot.active {
+.hero .carousel-dot.active {
   opacity: 1;
   font-size: 1.25rem;
   background: rgba(255,255,255,0.18);
+  border-color: transparent;
+  width: auto;
+  height: auto;
 }
 
-.carousel-progress {
+.hero .carousel-progress {
   width: 100%;
   max-width: 360px;
   min-width: 80px;
@@ -95,7 +108,7 @@
   gap: 0.5rem;
 }
 
-.progress-segment {
+.hero .progress-segment {
   flex: 1;
   height: 100%;
   background: rgba(255, 255, 255, 0.3);
@@ -104,7 +117,7 @@
   min-width: 30px;
 }
 
-.progress-segment.active { background: white; }
+.hero .progress-segment.active { background: white; }
 
 .scroll-down {
   position: absolute;
